@@ -1,16 +1,18 @@
 Package: wctools
-Title: What the Package Does (One Line, Title Case)
+Title: Tools to analyse Whole-Cell patch clamp data (of Neurons)
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Linus",
+           family = "Conrad",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+           email = "l.conrad@sheffield.ac.uk",
+           comment = c(ORCID = "0000-0001-5175-1988"))
+Description: A collection of tools to generate summaries from patch-clamp raw-data (abffiles).
+  
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+Imports: 
