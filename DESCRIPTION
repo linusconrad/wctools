@@ -21,5 +21,12 @@ Imports:
     readABF,
     ggthemes,
     ggplot2,
-    tidyr
+    tidyr,
+    purrr,
+    ggpubr,
+    cowplot,
+    rlang,
+    dplyr,
+    generics,
+    latex2exp
 Suggests:

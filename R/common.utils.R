@@ -10,9 +10,8 @@
 #' @return A tibble object of the file with variables, time and sweep columns
 #' @importFrom magrittr %>%
 #' @importFrom magrittr %<>%
-#' @import dplyr
+#' @import tidyr
 #' @export
-
 read.multisweep = function(abf, SR){
 data = readABF::readABF(abf)
 # assign some metadata
@@ -42,34 +41,37 @@ df
 #' @return A ggplot object of the first sweep with voltage and current trace
 #' @import ggplot2
 #' @import tidyr
+#' @importFrom rlang .data
 #' @export
-
-plot.first.sweep = function(abf){
+draw.first.sweep = function(abf){
   data = read.multisweep(abf, 50000)
   # omit all but first sweep to save time
-  data %<>% filter(., sweep == 1)
+  data %<>% dplyr::filter(.data$sweep == 1)
   
-  data %>%
-    pivot_longer(
-      .,
-      cols = c(1:2),
-      names_to = "variable",
-      values_to = "timeseries"
-    ) %>%
-    ggplot(., aes(x = t, y = timeseries, colour = variable)) +
+  pivot_longer(data,
+               cols = c(1:2),
+               names_to = "variable",
+               values_to = "timeseries") %>%
+    ggplot(aes(
+      x = .data$t,
+      y = .data$timeseries,
+      colour = .data$variable
+    )) +
     labs(y = " ",
          x = "t, s") +
     geom_line() +
-    scale_x_continuous(expand = c(0,0)) +
+    scale_x_continuous(expand = c(0, 0)) +
     geom_hline(linetype = 3,
                colour = "grey50",
                yintercept = 0) +
-    ggthemes::scale_color_few()+
-    facet_wrap( ~ variable,
-                ncol = 1,
-                scales = "free_y",
-                strip.position = "left",
-                as.table = F) +
+    ggthemes::scale_color_few() +
+    facet_wrap(
+      ~ variable,
+      ncol = 1,
+      scales = "free_y",
+      strip.position = "left",
+      as.table = F
+    ) +
     theme(legend.position = "none")
 }
   
@@ -78,37 +80,31 @@ plot.first.sweep = function(abf){
 #'  This is the same function as "plot.first.sweep" but instead of returning the plot object it just writes a .png to file
 #'  in the directory of the .abf file.
 #'  This function is meant to be used in a l_ply call of a list of files.
+#'  
 #' @param abf An .abf file to create a plot of
+#' @return does not return a thing, just writes a png to file
+#' @import ggplot2
+#' @import tidyr
 #' @export
-
-plot.first.sweep.png = function(abf){
-  data = read.multisweep(abf, 50000)
-  # omit all but first sweep to save time
-  data %<>% filter(., sweep == 1)
-  
-  plot = 
-    data %>%
-    pivot_longer(
-      .,
-      cols = c(1:2),
-      names_to = "variable",
-      values_to = "timeseries"
-    ) %>%
-    ggplot(., aes(x = t, y = timeseries, colour = variable)) +
-    labs(y = " ",
-         x = "t, s") +
-    geom_line() +
-    scale_x_continuous(expand = c(0,0)) +
-    geom_hline(linetype = 3,
-               colour = "grey50",
-               yintercept = 0) +
-    ggthemes::scale_color_few()+
-    facet_wrap( ~ variable,
-                ncol = 1,
-                scales = "free_y",
-                strip.position = "left",
-                as.table = F) +
-    theme(legend.position = "none")
+draw.first.sweep.png = function(abf){
+  plot = draw.first.sweep(abf)
   
   ggsave(filename = paste0(abf, "first.png"), plot = plot, width = 6, height = 4)
-}      
+}
+
+#' Take a measurement of a timeseries at a given timewindow
+#' 
+#' This function takes a measurement at a given timepoint.
+#' var being a vector in a dataframe with a time variable
+#' tp being the timepoint, win being a window around it
+#' this is meant for dplyr::summary calls so is supposed to return one datum
+#' 
+#' @param var the name of the variable
+#' @param tvar the name of the time variable
+#' @param tp the timepoint to measure
+#' @param win the time window to take the measurement of, (centered on tp)
+#' @export
+measure.timepoint = function(var, tvar, tp, win) {
+  mean(var[tvar > (tp - win / 2) &
+             tvar < (tp + win / 2)])
+}
