@@ -76,8 +76,8 @@ process.passive = function(abffile) {
     # summary of the sag coefficient
     sag =
       ggplot(databysweep, aes(x = .data$Istim, y = .data$sagcoef)) +
-      labs(x = TeX('$I_{stim}$, pA$'),
-           y = TeX('$\\frac{V{ss}}{V_{peak}}$')) +
+      labs(x = latex2exp::TeX('$I_{stim}$, pA$'),
+           y = latex2exp::TeX('$\\frac{V{ss}}{V_{peak}}$')) +
       #scale_x_continuous(expand = c(0, 0)) +
       geom_hline(linetype = 3,
                  colour = "grey50",
@@ -96,9 +96,9 @@ process.passive = function(abffile) {
         mutate(
           .,
           tscaled = .data$t - 0.0299,
-          Istim = extract.tp(.data$I, .data$t, 0.5, 0.02),
-          Vsteady = extract.tp(.data$V, .data$t, 0.5, 0.02),
-          RMP = extract.tp(.data$V, .data$t, 0.02, 0.02),
+          Istim = measure.timepoint(.data$I, .data$t, 0.5, 0.02),
+          Vsteady = measure.timepoint(.data$V, .data$t, 0.5, 0.02),
+          RMP = measure.timepoint(.data$V, .data$t, 0.02, 0.02),
           Vmin = min(.data$V),
           Vscaled = 1 - (.data$V - .data$RMP) / (.data$Vmin - .data$RMP),
           tpeak = min(t[.data$V == .data$Vmin]),
@@ -106,6 +106,66 @@ process.passive = function(abffile) {
           sagcoef = .data$Vsteady / .data$Vmin
         ) %>%
         filter(., .data$tscaled > 0, .data$t < .data$tpeak + 0.003)
+    
+    
+    # run the fitting in failsafe mode to generate table output
+    safe_nls = purrr::safely(stats::nls)
+    #now do the fitting with a purr call and process the results
+    fitset %<>%
+      group_by(.data$sweep) %>%
+      nest() %>%
+      mutate(fit = purrr::map(.data$data, ~ safe_nls(
+        formula = Vscaled ~ exp(-tscaled / tau),
+        data = .,
+        start = list(tau = 0.5)
+      )))
+    # 
+    
+    # Extract the results list from the safely output and overwrite the complicated nested column
+    fitset$fit = purrr::transpose(fitset$fit)$result
+    # 
+    # get all the coefs and tidy stuff
+    fitset %<>%
+      mutate(.,
+             coefs = purrr::map(.data$fit, generics::tidy),
+             fitvalue = purrr::map(.data$fit, generics::augment))
+
+    # Make a plot of the fit
+    (fits =
+      fitset %>%
+      unnest(c(.data$data), keep_empty = T) %>%
+      ggplot(.data, aes(
+        x = .data$tscaled,
+        y = .data$Vscaled,
+        colour = as.factor(.data$sweep)
+      )) +
+      labs(x = "t, s",
+           y = "V, normalised",
+           title = "Time course fitting, each sweep") +
+      facet_wrap(
+        ~ .data$sweep,
+        as.table = T,
+        scales = "free_x",
+        strip.position = "top",
+      ) +
+      scale_y_continuous(limits = c(0, 1)) +
+      geom_line(aes(group = .data$sweep)) +
+      theme(legend.position = "none") +
+      geom_line(
+        data = unnest(fitset, .data$fitvalue),
+        aes(y = .data$.fitted),
+        linetype = 3,
+        colour = "grey50"
+      ) +
+      geom_text(
+        data = unnest(fitset, coefs) ,
+        aes(label = paste0("tau = ", plyr::round_any(.data$estimate * 1000, 1), " ms")),
+        x = 0,
+        y = 1,
+        colour = "black",
+        vjust = "inward",
+        hjust = "inward"
+      ))
 }
 
 
@@ -115,17 +175,7 @@ process.passive = function(abffile) {
 
 
 # 
-#   # run the fitting in failsafe mode to generate table output
-#   safe_nls = purrr::safely(stats::nls)
-#   # now do the fitting with a purr call and process the results
-#   fitset %<>%
-#     group_by(sweep) %>%
-#     nest(.) %>%
-#     mutate(., fit = purrr::map(data, ~ safe_nls(
-#       formula = Vscaled ~ exp(-tscaled / tau),
-#       data = .,
-#       start = list(tau = 0.5)
-#     )))
+
 # 
 #   # Extract the results list from the safely output and overwrite the complicated nested column
 #   fitset$fit = purrr:transpose(fitset$fit)$result

@@ -28,5 +28,7 @@ Imports:
     rlang,
     dplyr,
     generics,
-    latex2exp
+    latex2exp,
+    purrr,
+    plyr
 Suggests:
