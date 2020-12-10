@@ -43,6 +43,9 @@ process.passive = function(abffile) {
   
   # make some summary graphs
   # raw timecourses
+  # set the theme
+  theme_set(theme_linus)
+  
   trace = 
     ggplot(data, aes(x = .data$t, y = .data$V)) +
     labs(x = "t, s", y = "V, mV") +
@@ -114,6 +117,17 @@ process.passive = function(abffile) {
              .data$tscaled <  0.05))
     
     
+    # Alternatively use the fitset to find the crossing of the normalised response
+    # with 1/e of the final value (~36% in this case)
+    # update and write to the summary table
+    taux = summarise(
+      fitset,
+      taucross = mean(.data$tscaled[.data$Vscaled > 0.3578794 &
+                                      .data$Vscaled < 0.3778794]))
+    
+    databysweep =
+      left_join(databysweep, summarise(fitset, taux))
+    
     # run the fitting in failsafe mode to generate table output
     safe_nls = purrr::safely(stats::nls)
     #now do the fitting with a purr call and process the results
@@ -125,28 +139,24 @@ process.passive = function(abffile) {
         data = .,
         start = list(tau = 0.5)
       )))
-    
+
     # # Extract the results list from the safely output and overwrite the complicated nested column
     fitset$fit = purrr::transpose(fitset$fit)$result
     #
     # get all the coefs and tidy stuff
     fitset %<>%
-      mutate(.,
-             coefs = purrr::map(.data$fit, generics::tidy),
+      mutate(coefs = purrr::map(.data$fit, generics::tidy),
              fitvalue = purrr::map(.data$fit, generics::augment))
-     
+
     # Make a plot of the fits
-   
-    fitset %>%
+    fits =
+      fitset %>%
       unnest(c(.data$data), keep_empty = T) %>%
-      ggplot(aes(
-        x = .data$tscaled,
-        y = .data$Vscaled,
-        colour = as.factor(.data$sweep)
-      )) +
+      ggplot(aes(x = .data$tscaled,
+                 y = .data$Vscaled)) +
       labs(x = "t, s",
            y = "V, normalised",
-           title = "Time course fitting, each sweep") +
+           title = "Time Course Analysis, per sweep") +
       facet_wrap(
         ~ .data$sweep,
         as.table = T,
@@ -155,121 +165,108 @@ process.passive = function(abffile) {
       ) +
       scale_y_continuous(limits = c(-0.09, 1)) +
       geom_line(aes(group = .data$sweep)) +
-      geom_line(data = unnest(fitset, .data$fitvalue),
+      geom_line(
+        data = unnest(fitset, .data$fitvalue),
         aes(y = .data$.fitted),
-        linetype = 3,
-        colour = "grey50") +
+        linetype = 1,
+        colour = "red"
+      ) +
+      geom_hline(yintercept = c(0, 1),
+                 linetype = 3,
+                 colour = "grey50") +
+      geom_segment(
+        aes(
+          x = .data$taucross,
+          xend = .data$taucross,
+          y = 1 / exp(1),
+          yend = -Inf
+        ),
+        colour = "blue",
+        data = taux
+      ) +
+      geom_segment(
+        aes(
+          x = .data$taucross,
+          xend = -Inf,
+          y = 1 / exp(1),
+          yend = 1 / exp(1)
+        ),
+        colour = "blue",
+        data = taux
+      ) +
       geom_text(
         data = unnest(fitset, coefs) ,
         aes(label = paste0(
-          "tau fit = ", plyr::round_any(.data$estimate * 1000, 1), " ms"
+          "tau fit = ", round(.data$estimate * 1000, 2), " ms"
         )),
-        x = 0,
+        x = 0.01,
         y = 1,
-        colour = "black",
+        colour = "red",
         vjust = "inward",
         hjust = "inward"
       ) +
-      theme_classic() +
-      theme(legend.position = "none") 
+      geom_text(
+        data = taux ,
+        aes(label = paste0(
+          "tau cross = ", round(.data$taucross * 1000, 2), " ms"
+        )),
+        x = 0.01,
+        y = 0.8,
+        colour = "blue",
+        vjust = "inward",
+        hjust = "inward",
+        check_overlap = T
+      ) +
+      theme(legend.position = "none")
     
+    ##############################
+    # write all to file
+    comb =   ggpubr::ggarrange(trace, IV, sag, ncol =3)
+    
+    cowplot::plot_grid(
+      comb,
+      fits,
+      ncol = 1,
+      align = "v",
+      axis = "lr",
+      rel_heights = c(1, 4)
+    ) %>%
+      # add Text annotations
+      ggpubr::annotate_figure(
+        top = ggpubr::text_grob(
+          "Hyperpolarising step protocol",
+          size = 14
+        ),
+        bottom = ggpubr::text_grob(
+          paste0(
+            "Data source: \n",
+            abffile,
+            "\n RMP: ",
+            plyr::round_any(coefs$estimate[1], accuracy = 0.1) ,
+            " mV \n",
+            "Input Resistance: ",
+            plyr::round_any(coefs$estimate[2], accuracy = 0.01) * 1000 ,
+            " MOhm \n"
+          )
+        )
+      ) %>%
+      ggsave(
+        filename = paste0(abffile, ".passive.png"),
+        width = 10,
+        height = 15
+      )
+    
+    # extract the fit parameters and write all the summary to file
+    left_join(
+      databysweep,
+      fitset %>%
+        unnest(.data$coefs) %>%
+        select(.data$sweep, .data$estimate) %>%
+        rename(tau = .data$estimate) %>%
+        # rescale to ms
+        mutate(tau = .data$tau * 1000)
+    ) %>%
+      readr::write_csv(file = paste0(abffile, ".sweeps.csv"))
 }
 
 
-
-#   # Extract the results list from the safely output and overwrite the complicated nested column
-#   fitset$fit = purrr:transpose(fitset$fit)$result
-# 
-#   # get all the coefs and tidy stuff
-#   fitset %<>%
-#     mutate(.,
-#            coefs = purrr::map(fit, ~ tidy(.)),
-#            fitvalue = purrr::map(fit, ~ augment(.)))
-# 
-#   # Make a plot of the fit
-#   fits =
-#     fitset %>%
-#     unnest(., c(data), keep_empty = T) %>%
-#     ggplot(., aes(
-#       x = tscaled,
-#       y = Vscaled,
-#       colour = as.factor(sweep)
-#     )) +
-#     labs(x = "t, s",
-#          y = "V, normalised",
-#          title = "Time course fitting, each sweep")+
-#     facet_wrap(
-#       ~ sweep,
-#       as.table = T,
-#       scales = "free_x",
-#       strip.position = "top",
-#     ) +
-#     scale_y_continuous(limits = c(0, 1)) +
-#     geom_line(aes(group = sweep)) +
-#     theme(legend.position = "none") +
-#     geom_line(
-#       data = unnest(fitset, fitvalue),
-#       aes(y = .fitted),
-#       linetype = 3,
-#       colour = "grey50"
-#     ) +
-#     geom_text(
-#       data = unnest(fitset, coefs) ,
-#       aes(label = paste0("τ = ", round_any(estimate * 1000, 1), " ms")),
-#       x = 0,
-#       y = 1,
-#       colour = "black",
-#       vjust = "inward",
-#       hjust = "inward"
-#     )
-# 
-#   #############################
-#   # write all to file
-#   comb =   ggpubr::ggarrange(trace, IV, sag, ncol =3)
-# 
-#   cowplot::plot_grid(comb,
-#                      fits,
-#                      ncol = 1,
-#                      align = "v",
-#                      axis = "lr",
-#                      rel_heights = c(1,4)) %>%
-#     # add Text annotations
-#     ggpubr::annotate_figure(
-#       .,
-#       top = text_grob(
-#         "Hyperpolarising step protocol",
-#         size = 14,
-#         family  = "Palatino"
-#       ),
-#       bottom = text_grob(
-#         paste0(
-#           "Data source: \n",
-#           abffile,
-#           "\n RMP: ",
-#           round_any(coefs$estimate[1], accuracy = 0.1) ,
-#           " mV \n",
-#           "Input Resistance: ",
-#           round_any(coefs$estimate[2], accuracy = 0.01) * 1000 ,
-#           " MOhm \n"
-#         ),
-#         family = "Palatino"
-#       )
-#     ) %>%
-#     ggsave(
-#       filename = paste0(abffile, ".passive.png"),
-#       width = 10,
-#       height = 15
-#     )
-# 
-#   # extract the fit parameters and write all the summary to file
-#   left_join(
-#     databysweep,
-#     fitset %>%
-#       unnest(., coefs) %>%
-#       select(., sweep, estimate) %>%
-#       rename(., tau = estimate) %>%
-#       # rescale to ms
-#       mutate(., tau = tau * 1000)
-#   ) %>%
-#     write_csv(., path = paste0(abffile, ".sweeps.csv"))
-# }

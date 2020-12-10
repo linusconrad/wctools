@@ -108,3 +108,28 @@ measure.timepoint = function(var, tvar, tp, win) {
   mean(var[tvar > (tp - win / 2) &
              tvar < (tp + win / 2)])
 }
+
+# ggplot options that are nice
+plot.font = "sans"   # activate as needed based on OS
+
+#' Default setting for ggplot
+#' Nice setting for ggplot
+#' @export
+theme_linus = 
+ ggthemes::theme_few() +
+    theme(
+      legend.position = "bottom",
+      legend.title = NULL,
+      strip.placement = "outside",
+      strip.background = element_blank(),
+      #          plot.margin = margin(t = 0.2,r =0.1, b = 0, l = 0, "cm"),
+      text = element_text(
+        family = plot.font,
+        size = 11,
+        face = "plain"
+      ),
+      title = element_text(family = plot.font),
+      strip.text = element_text(family = plot.font)
+    )
+
+

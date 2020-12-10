@@ -30,5 +30,6 @@ Imports:
     generics,
     latex2exp,
     purrr,
-    plyr
+    plyr,
+    readr
 Suggests:
