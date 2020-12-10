@@ -31,5 +31,6 @@ Imports:
     latex2exp,
     purrr,
     plyr,
-    readr
+    readr,
+    signal
 Suggests:
