@@ -219,6 +219,8 @@ process.passive = function(abffile) {
       ) +
       theme(legend.position = "none")
     
+    # make a plot of just the tau?
+    
     ##############################
     # write all to file
     comb =   ggpubr::ggarrange(trace, IV, sag, ncol =3)
