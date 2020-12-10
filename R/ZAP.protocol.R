@@ -10,22 +10,20 @@
 #' @return A dataframe with columns realZAP (MOhm) and imZAP, the real and imaginary complex impedance values at each frequency
 #' @export
 calcZAP = function(ZAPinput){
-  df = ZAPinput
-  lengthsweep = length(ZAPinput/max(ZAPinput$sweep))
+  lengthsweep = length(ZAPinput$V/max(ZAPinput$sweep))
   
-    ZAPdf = ZAPinput %>%
+  ZAPdf = ZAPinput %>%
     group_by(sweep) %>%
     mutate(
-      .,
       FFT.V = stats::fft(.data$V),
       FFT.I = stats::fft(.data$I),
       n = seq_along(.data$FFT.V),
-      freq = n * (50000 / lengthsweep),
+      freq = n * (50000 /lengthsweep),
       ZAP = Re((.data$FFT.V / .data$FFT.I)) * 1000,
       phase = Im(.data$FFT.V / .data$FFT.I)
     ) %>%
     ungroup %>%
-    group_by(freq) %>%
+    group_by(.data$freq) %>%
     summarise(realZAP = mean(Re(.data$ZAP)),
               imZAP = mean(.data$phase))
   
