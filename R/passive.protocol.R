@@ -89,7 +89,7 @@ process.passive = function(abffile) {
   # tau fitting
   # make truncated normalised dataset to do the fits
 
-  fitset =
+  (fitset =
         data %>%
         group_by(.data$sweep) %>%
         # repeat the extraction of the times to get the rising parts
@@ -109,7 +109,9 @@ process.passive = function(abffile) {
        # for the fits do not take the first sweeps with sag.
        # use the first 20 ms of sweeps without
       filter(.data$sweep > 2,
-             .data$t <  0.05)
+             .data$sweep < 10,
+             .data$tscaled >  0,
+             .data$tscaled <  0.05))
     
     
     # run the fitting in failsafe mode to generate table output
@@ -123,22 +125,22 @@ process.passive = function(abffile) {
         data = .,
         start = list(tau = 0.5)
       )))
-    # # 
-    # 
+    
     # # Extract the results list from the safely output and overwrite the complicated nested column
-    # fitset$fit = purrr::transpose(fitset$fit)$result
-    # # 
-    # # get all the coefs and tidy stuff
-    # fitset %<>%
-    #   mutate(.,
-    #          coefs = purrr::map(.data$fit, generics::tidy),
-    #          fitvalue = purrr::map(.data$fit, generics::augment))
-    # 
-    # # Make a plot of the fit
-    (fits =
-      #unnest(c(.data$data), keep_empty = T) %>%
-      ggplot(fitset, aes(
-        x = .data$t,
+    fitset$fit = purrr::transpose(fitset$fit)$result
+    #
+    # get all the coefs and tidy stuff
+    fitset %<>%
+      mutate(.,
+             coefs = purrr::map(.data$fit, generics::tidy),
+             fitvalue = purrr::map(.data$fit, generics::augment))
+     
+    # Make a plot of the fits
+   
+    fitset %>%
+      unnest(c(.data$data), keep_empty = T) %>%
+      ggplot(aes(
+        x = .data$tscaled,
         y = .data$Vscaled,
         colour = as.factor(.data$sweep)
       )) +
@@ -151,36 +153,30 @@ process.passive = function(abffile) {
         scales = "free",
         strip.position = "top",
       ) +
-      #scale_y_continuous(limits = c(0, 1)) +
+      scale_y_continuous(limits = c(-0.09, 1)) +
       geom_line(aes(group = .data$sweep)) +
+      geom_line(data = unnest(fitset, .data$fitvalue),
+        aes(y = .data$.fitted),
+        linetype = 3,
+        colour = "grey50") +
+      geom_text(
+        data = unnest(fitset, coefs) ,
+        aes(label = paste0(
+          "tau fit = ", plyr::round_any(.data$estimate * 1000, 1), " ms"
+        )),
+        x = 0,
+        y = 1,
+        colour = "black",
+        vjust = "inward",
+        hjust = "inward"
+      ) +
+      theme_classic() +
       theme(legend.position = "none") 
-      # geom_line(
-      #   data = unnest(fitset, .data$fitvalue),
-      #   aes(y = .data$.fitted),
-      #   linetype = 3,
-      #   colour = "grey50"
-      # ) +
-      # geom_text(
-      #   data = unnest(fitset, coefs) ,
-      #   aes(label = paste0("tau = ", plyr::round_any(.data$estimate * 1000, 1), " ms")),
-      #   x = 0,
-      #   y = 1,
-      #   colour = "black",
-      #   vjust = "inward",
-      #   hjust = "inward"
-      # )
-      )
+    
 }
 
 
-# 
 
-# 
-
-
-# 
-
-# 
 #   # Extract the results list from the safely output and overwrite the complicated nested column
 #   fitset$fit = purrr:transpose(fitset$fit)$result
 # 
