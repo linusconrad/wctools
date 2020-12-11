@@ -17,8 +17,8 @@ calcZAP = function(ZAPinput){
     mutate(
       FFT.V = stats::fft(.data$V),
       FFT.I = stats::fft(.data$I),
-      n = seq_along(.data$FFT.V),
-      freq = n * (50000 /lengthsweep),
+      n = c(seq_along(.data$FFT.V))-1, #needs to start at 0!
+      freq = n * 50000 /lengthsweep,
       ZAP = Re((.data$FFT.V / .data$FFT.I)) * 1000,
       phase = Im(.data$FFT.V / .data$FFT.I)
     ) %>%
@@ -55,7 +55,7 @@ process.ZAP = function(file){
   
   print("...done")
   print("Writing ZAP...")
-  readr::write_csv(ZAPdata, path = paste0(file, ".ZAPoutput.csv"))
+  readr::write_csv(ZAPdata, file = paste0(file, ".ZAPoutput.csv"))
   print("...done")
   
   
@@ -64,13 +64,13 @@ process.ZAP = function(file){
     data %>%
     filter(.data$t > 0.5 , .data$t < max(30), .data$sweep == 1) %>%
     ggplot(., aes(x = .data$t, y = .data$V)) +
-    labs(y = " ",
+    labs(y = "V, mV",
          x = "t, s",
          title = "Raw Traces") +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(breaks = c(-100, 0)) +
-    scale_color_few() +
-    facet_wrap(~ sweep,
+    ggthemes::scale_color_few() +
+    facet_wrap(~ .data$sweep,
                ncol = 1) +
     geom_line() +
     geom_hline(linetype = 3,
@@ -80,30 +80,29 @@ process.ZAP = function(file){
     theme(axis.text.y = element_text(),
           panel.border = element_rect(colour = "grey50", fill = NA),
           plot.title = element_text(),
-          text = element_text(family = "Palatino")) 
+          text = element_text())
   # plot the zap spectra
   # First add an SG filter to plot
   ZAPdata %<>%
-    mutate(smoothR = signal::filter(signal::sgolay(p=1, n=67, m=0), realZAP),
-           smoothIM = signal::filter(signal::sgolay(p=1, n=67, m=0), imZAP))
+    mutate(smoothR = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$realZAP),
+           smoothIM = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$imZAP))
   
+  theme_set(theme_linus)
   plot1 = ZAPdata %>%
     filter(.data$freq > 1, .data$freq < 50, .data$realZAP > 0) %>%
     ggplot(aes(x = .data$freq, y = .data$realZAP)) +
     labs(x = "f, Hz",
          title = "Unprocessed ZAP",
-         y = TeX("Z, M$\\Omega$"))+
+         y = latex2exp::TeX("Z, M$\\Omega$"))+
     geom_line() +
     geom_line(aes(y = .data$smoothR), colour = "blue")
   
   plot2 =  ZAPdata %>%
-    pivot_longer(.,
-                 c(smoothR, smoothIM),
+    pivot_longer(all_of(c("smoothR", "smoothIM")),
                  names_to = "component",
                  values_to = "ZAP") %>%
-    filter(., freq > 1, freq < 50) %>%
-    ggplot(data = .,
-           aes(x = freq, y = ZAP)) +
+    filter(.data$freq > 1, .data$freq < 20) %>%
+    ggplot(aes(x = .data$freq, y = .data$ZAP)) +
     labs(title = "Smoothed Spectra",
          y = " ",
          x = "f, Hz") +
@@ -126,24 +125,18 @@ process.ZAP = function(file){
                    ncol = 2),
     ncol = 1,
     align = "h",
-    axis = "lr"
+    axis = "lr",
+    rel_heights = c(0.2,1)
   ) %>%
-    annotate_figure(
-      .,
-      top = text_grob(
+    ggpubr::annotate_figure(top = ggpubr::text_grob(
         "Impedance Amplitude Profile",
-        size = 14,
-        family  = "Palatino"
-      ),
-      bottom = text_grob(paste0("Data source: \n",
-                                file),
-                         family = "Palatino")
+        size = 14),
+      bottom = ggpubr::text_grob(paste0("Data source: \n",
+                                file))
     ) %>%
-    ggsave(
-      .,
-      filename = paste0(file, "ZAPplot.png"),
-      width = 8,
-      height = 8
+    ggsave(filename = paste0(file, "ZAPplot.png"),
+      width = 6,
+      height = 4
     )
 }
 

@@ -32,5 +32,6 @@ Imports:
     purrr,
     plyr,
     readr,
-    signal
+    signal,
+    egg
 Suggests:
