@@ -20,12 +20,14 @@ calcZAP = function(ZAPinput){
       n = c(seq_along(.data$FFT.V))-1, #needs to start at 0!
       freq = n * 50000 /lengthsweep,
       ZAP = Re((.data$FFT.V / .data$FFT.I)) * 1000,
-      phase = Im(.data$FFT.V / .data$FFT.I)
+      phase = Im(.data$FFT.V / .data$FFT.I),
+      Mag = base::sqrt(.data$ZAP^2 + .data$phase^2)
     ) %>%
     ungroup %>%
     group_by(.data$freq) %>%
     summarise(realZAP = mean(Re(.data$ZAP)),
-              imZAP = mean(.data$phase))
+              imZAP = mean(.data$phase),
+              Mag = mean(.data$Mag))
   
   ZAPdf
 }
@@ -84,24 +86,24 @@ process.ZAP = function(file){
   # plot the zap spectra
   # First add an SG filter to plot
   ZAPdata %<>%
-    mutate(smoothR = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$realZAP),
-           smoothIM = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$imZAP))
+    mutate(smoothmag = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$Mag),
+           smoothR = signal::filter(signal::sgolay(p=1, n=67, m=0), .data$realZAP))
   
   theme_set(theme_linus)
   plot1 = ZAPdata %>%
     filter(.data$freq > 1, .data$freq < 50, .data$realZAP > 0) %>%
-    ggplot(aes(x = .data$freq, y = .data$realZAP)) +
+    ggplot(aes(x = .data$freq, y = .data$Mag)) +
     labs(x = "f, Hz",
          title = "Unprocessed ZAP",
-         y = latex2exp::TeX("Z, M$\\Omega$"))+
+         y = latex2exp::TeX("Mag. Z,, M$\\Omega$"))+
     geom_line() +
-    geom_line(aes(y = .data$smoothR), colour = "blue")
+    geom_line(aes(y = .data$smoothmag), colour = "blue")
   
   plot2 =  ZAPdata %>%
-    pivot_longer(all_of(c("smoothR", "smoothIM")),
+    pivot_longer(all_of(c("smoothR", "smoothmag")),
                  names_to = "component",
                  values_to = "ZAP") %>%
-    filter(.data$freq > 1, .data$freq < 20) %>%
+    filter(.data$freq > 1, .data$freq < 50) %>%
     ggplot(aes(x = .data$freq, y = .data$ZAP)) +
     labs(title = "Smoothed Spectra",
          y = " ",
@@ -110,8 +112,8 @@ process.ZAP = function(file){
     facet_wrap(
       ~ component,
       labeller = labeller(
-        component = c('smoothR' = "Z, MOhm",
-                      'smoothIM' = "Phase")
+        component = c('smoothR' = "Re Z",
+                      'smoothmag' = "Mag. Z, MOhm")
       ),
       scales = "free",
       ncol = 1,
