@@ -33,5 +33,6 @@ Imports:
     plyr,
     readr,
     signal,
-    egg
+    egg,
+    reticulate
 Suggests:
