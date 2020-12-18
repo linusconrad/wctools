@@ -6,6 +6,16 @@
 \usage{
 returnAPdf(df, Vvar)
 }
+\arguments{
+\item{df}{Time series df from an abf}
+
+\item{Vvar}{Charavter vector, name of the voltage variable within df}
+}
+\value{
+A data frame with variables described above, with list columns
+}
 \description{
-Fetch Action potentials
+This function takes a timeseries dataframe (from abf import) with the voltage variable \code{Vvar}.
+It returns a dataframe containing the timepoints of the peaks of AP (\code{tpeak}), their height (\code{Vpeak}) and position within the sweep (\code{APindex}).
+It contains the time scales \code{tAP} and \code{t} in list columns that can be matched with the source data timeseries to align AP for plotting.
 }

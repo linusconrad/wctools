@@ -83,6 +83,31 @@ returnAPdf = function(df, Vvar) {
       tAP = purrr::map(.data$tpeak, .f = add.tiled.tAP, .data$cutpoint.pre, .data$cutpoint.post),
       t = purrr::map(.data$tpeak, .f = add.tiled.t, .data$cutpoint.pre, .data$cutpoint.post)
     ) %>%
-    dplyr::select(tidyr::starts_with("cutpoint"))
+    dplyr::select(-tidyr::starts_with("cutpoint"))
   
 }
+
+
+#' Fortify an DF with AP information
+#'
+#' This function takes an abf timeseries dataframe and detects AP within it.
+#' Then it adds the index of the AP within the sweep and adds a timescale to align all AP found by their peaks.
+#' @param df Dataframe with the rawdata
+#' @param Vvar name of the voltage variable in `df`, string
+#' @return source dataset with added AP index and AP centered timescale
+#' @export
+add.AP = function(df, Vvar) {
+  # change behaviour depending on whether ist gap free or sweep data
+  columns = c("t", "tAP", "APindex", "sweep")
+  
+  if (is.null(df$sweep))
+    columns = c("t", "tAP", "APindex")
+  
+  APdf =
+    returnAPdf(df, Vvar) %>%
+    dplyr::select(dplyr::all_of(columns)) %>%
+    unnest(cols = c(.data$t, .data$tAP))
+  #join and return
+  dplyr::left_join(df, APdf)
+}
+
