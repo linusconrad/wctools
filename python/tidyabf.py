@@ -29,5 +29,6 @@ def tidyabf(file):
 test = pyabf.ABF("inst/extdata/2020_12_02 sgn P8 2DIV 3B cell1_0020ZAP.abf")
 
 test.dacNames
-
 test.adcNames
+
+test.sweepC
