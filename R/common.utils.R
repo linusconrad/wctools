@@ -28,6 +28,8 @@ names(df) = data$channelNames
 # create sweep and time signatures
 df$t = rep(c(c(1:npersweep)*(1/SR)), nsweep)
 df$sweep = rep(1:nsweep, each = npersweep)
+# reorder columns
+df %<>% dplyr::relocate(., tidyr::starts_with("t"), .before = tidyr::starts_with("V"))
 # return the df
 df
 }
@@ -47,9 +49,7 @@ df
 #' @export
 draw.first.sweep = function(abf){
   # use the python implementation to read but fallback to R if it fails for some reason
-  try(
-    data = read.multisweep.pyth(abf)
-  )
+  data = try(read.multisweep.pyth(abf))
   
   if (is.null(data)) 
     data = read.multisweep(abf, 50000)
@@ -58,7 +58,7 @@ draw.first.sweep = function(abf){
   data %<>% dplyr::filter(.data$sweep == 1)
   
   pivot_longer(data,
-               cols = c(1:2),
+               cols = c(2:3),
                names_to = "variable",
                values_to = "timeseries") %>%
     ggplot(aes(
@@ -174,7 +174,8 @@ read.multisweep.pyth = function(file) {
   df =
     as.list(1:abf$sweepCount) %>%
     plyr::ldply(getdf, abf) %>%
-    tidyr::tibble()
+    tidyr::tibble() %>%
+    mutate(sweep = .data$sweep +1) # return to R indexing
   # clean the names
   names(df)[2] = nameY
   names(df)[3] = nameC
