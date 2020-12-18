@@ -26,7 +26,7 @@ df = as_tibble(do.call(rbind, data$data), .name_repair = "unique")
 names(df) = data$channelNames
 
 # create sweep and time signatures
-df$t = rep(c(c(1:npersweep)*(1/SR)), nsweep)
+df$t = rep(c(c(0:(npersweep-1))*(1/SR)), nsweep)
 df$sweep = rep(1:nsweep, each = npersweep)
 # reorder columns
 df %<>% dplyr::relocate(., tidyr::starts_with("t"), .before = tidyr::starts_with("V"))
@@ -51,7 +51,8 @@ draw.first.sweep = function(abf){
   # use the python implementation to read but fallback to R if it fails for some reason
   data = try(read.multisweep.pyth(abf))
   
-  if (is.null(data)) 
+  # checks whether stimulus variable is empty and loads with R in that case
+  if (is.na(data[3][[1]][1])) 
     data = read.multisweep(abf, 50000)
   
   # omit all but first sweep to save time

@@ -19,4 +19,6 @@ This function takes an .abf file and loads it into memory as a tidy tibble.
 Information about sweep etc is written to another column.
 This will not always be a very memory saving way to do it.
 This works for Vclamp and Cclamp recordings with two timeseries variables.
+CAREFUL: This takes the recorded stimulus trace, not the applied stimulus ("add stimulus waveform" of clampfit)
+Advantage of this function is that it should work with complex waveform protocols (AP waveform, ZAP) without the stimulus file being present.
 }

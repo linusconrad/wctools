@@ -10,8 +10,12 @@ read.multisweep.pyth(file)
 \item{abf}{periodic stimulation abf file}
 }
 \value{
-tibble of the abf with sweep variable
+tibble of the abf with stimulus and sweep variable
 }
 \description{
-This is a wrapper around pyabf
+This is a wrapper around pyabf.
+This function works on periodic stimulation abf files.
+The original protocol stimulus is reconstructed and added to the file.
+The function will fail on files with arbitrary waveform specification.
+Here, the stimulus waveform file needs to be present in the project path or the directory of the rawdata file.
 }
