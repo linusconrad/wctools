@@ -271,6 +271,3 @@ process.passive = function(abffile) {
       readr::write_csv(file = paste0(abffile, ".sweeps.csv"))
 }
 
-
-"git acces is fucked"
-"test"

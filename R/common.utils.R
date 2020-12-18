@@ -46,7 +46,14 @@ df
 #' @importFrom rlang .data
 #' @export
 draw.first.sweep = function(abf){
-  data = read.multisweep(abf, 50000)
+  # use the python implementation to read but fallback to R if it fails for some reason
+  try(
+    data = read.multisweep.pyth(abf)
+  )
+  
+  if (is.null(data)) 
+    data = read.multisweep(abf, 50000)
+  
   # omit all but first sweep to save time
   data %<>% dplyr::filter(.data$sweep == 1)
   
