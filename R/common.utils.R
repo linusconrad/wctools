@@ -4,6 +4,8 @@
 #' Information about sweep etc is written to another column.
 #' This will not always be a very memory saving way to do it.
 #' This works for Vclamp and Cclamp recordings with two timeseries variables.
+#' CAREFUL: This takes the recorded stimulus trace, not the applied stimulus ("add stimulus waveform" of clampfit)
+#' Advantage of this function is that it should work with complex waveform protocols (AP waveform, ZAP) without the stimulus file being present.
 #' 
 #' @param abf Path to the input .abf file (periodic abf, two timeseries)
 #' @param SR The sampling rate of the recording in Hz
@@ -134,13 +136,17 @@ theme_linus =
 
 #' Read .abf with the pyabf API
 #' 
-#' This is a wrapper around pyabf
+#' This is a wrapper around pyabf.
+#' This function works on periodic stimulation abf files.
+#' The original protocol stimulus is reconstructed and added to the file.
+#' The function will fail on files with arbitrary waveform specification.
+#' Here, the stimulus waveform file needs to be present in the project path or the directory of the rawdata file.
 #' @param abf periodic stimulation abf file
-#' @return tibble of the abf with sweep variable
+#' @return tibble of the abf with stimulus and sweep variable
+#' @export
 read.multisweep.pyth = function(file) {
   abf = pyabf$ABF(file)
   # refactor the previous python script into plain R
-  
   getdf =  function(sweep, abfobj) {
     # R function to extract 1 sweep
     sweep = as.integer(sweep - 1)# need to do -1 because of typical python indexing
@@ -153,8 +159,18 @@ read.multisweep.pyth = function(file) {
       sweep = rep(sweep, abfobj$sweepPointCount)
     )
   }
+  # get the names of the variables from the abf object
+  # they are hidden away a bit
+  nameC = abf$dacNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
+  nameY = abf$adcNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
   # make an ldply call to extract all
-  as.list(1:abf$sweepCount) %>%
+  df =
+    as.list(1:abf$sweepCount) %>%
     plyr::ldply(getdf, abf) %>%
     tidyr::tibble()
+  # clean the names
+  names(df)[2] = nameY
+  names(df)[3] = nameC
+  # return the data
+  df
 }

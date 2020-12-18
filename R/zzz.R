@@ -1,5 +1,4 @@
 .onLoad <- function(libname, pkgname) {
-  reticulate::use_condaenv("analysis")
-  pyabf <<- reticulate::import("pyabf")
-  print("Imported pyabf with reticulate")
+  pyabf <<- reticulate::import("pyabf", delay_load = T)
+  print("This package uses the python import `pyabf`. Before using, activate a Conda environment or other Python istallation with the pyabf module available. Refer to the `reticulate docs` to do this")
 }

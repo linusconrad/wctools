@@ -13,8 +13,8 @@
 #' @importFrom rlang .data
 #' @export
 process.passive = function(abffile) {
-  data = read.multisweep(abffile, 50000)
-  names(data) = c("V", "I", "t", "sweep")
+  data = read.multisweep.pyth(abffile)
+  names(data) = c("t", "V", "I", "sweep")
   #
   #######
   # Calculating the simple parameters
@@ -38,7 +38,7 @@ process.passive = function(abffile) {
   regression =
     stats::lm(Vsteady ~ Istim, data = databysweep)
   
-  coefs = generics::tidy(regression)
+  coefs = broom::tidy(regression)
   R.squared = generics::glance(regression)$r.squared
   
   # make some summary graphs
@@ -145,7 +145,7 @@ process.passive = function(abffile) {
     #
     # get all the coefs and tidy stuff
     fitset %<>%
-      mutate(coefs = purrr::map(.data$fit, generics::tidy),
+      mutate(coefs = purrr::map(.data$fit, broom::tidy),
              fitvalue = purrr::map(.data$fit, generics::augment))
 
     # Make a plot of the fits
