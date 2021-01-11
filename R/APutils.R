@@ -21,7 +21,7 @@ findAP = function(dV)
 #' It returns a dataframe containing the timepoints of the peaks of AP (`tpeak`), their height (`Vpeak`) and position within the sweep (`APindex`).
 #' It contains the time scales `tAP` and `t` in list columns that can be matched with the source data timeseries to align AP for plotting.
 #' @param df Time series df from an abf
-#' @param Vvar Charavter vector, name of the voltage variable within df
+#' @param Vvar Character vector, name of the voltage variable within df
 #' @return A data frame with variables described above, with list columns 
 #' @export 
 returnAPdf = function(df, Vvar) {
@@ -97,7 +97,7 @@ returnAPdf = function(df, Vvar) {
 #' @return source dataset with added AP index and AP centered timescale
 #' @export
 add.AP = function(df, Vvar) {
-  # change behaviour depending on whether ist gap free or sweep data
+  # change behaviour depending on whether is gap free or sweep data
   columns = c("t", "tAP", "APindex", "sweep")
   
   if (is.null(df$sweep))
