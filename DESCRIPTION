@@ -34,5 +34,6 @@ Imports:
     readr,
     signal,
     egg,
-    reticulate
+    reticulate,
+    pracma
 Suggests:

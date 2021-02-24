@@ -9,7 +9,7 @@ returnAPdf(df, Vvar)
 \arguments{
 \item{df}{Time series df from an abf}
 
-\item{Vvar}{Charavter vector, name of the voltage variable within df}
+\item{Vvar}{Character vector, name of the voltage variable within df}
 }
 \value{
 A data frame with variables described above, with list columns

@@ -63,9 +63,9 @@ returnAPdf = function(df, Vvar) {
     # The first and last AP will have NA as cutpoints
     # In this case replace with fixed values
     if (is.na(pre))
-      pre = tp - 0.01 #default to 10 ms win
+      pre = tp - 0.015 #default to 15 ms win
     if (is.na(post))
-      post = tp + 0.01
+      post = tp + 0.015
     # return a timescale with the cutpoints
     seq(from = plyr::round_any(pre, 1/50000) + 1/50000, # remove 1 sample each to avoid overlaps
         to = plyr::round_any(post, 1/50000) - 1/50000,
@@ -96,7 +96,7 @@ returnAPdf = function(df, Vvar) {
 #' @param Vvar name of the voltage variable in `df`, string
 #' @return source dataset with added AP index and AP centered timescale
 #' @export
-add.AP = function(df, Vvar) {
+addAP = function(df, Vvar) {
   # change behaviour depending on whether is gap free or sweep data
   columns = c("t", "tAP", "APindex", "sweep")
   
@@ -110,4 +110,100 @@ add.AP = function(df, Vvar) {
   #join and return
   dplyr::left_join(df, APdf)
 }
+
+#' Generate AP summary stats
+#'
+#' This function takes an abf timeseries, detects AP within it and returns their waveform measurements.
+#' @param df Dataframe with the rawdata
+#' @param vvar name of the voltage variable in `df`, string
+#' @return summary stats of the AP such as Peak, time, afterhyperpolarisation, width and interspike interval
+#' @export
+getAPstats = function(df, vvar) {
+  data = addAP(df, vvar)
+  
+  # The definition of Vrest might need some work..
+  Vrest = pracma::Mode(data[[vvar]])
+  # Make a normalised Voltage scale
+  data %<>%
+    mutate(V0 = .data[[vvar]] - Vrest,
+           Vnorm = .data$V0 / .data$V0[.data$V0 == max(.data$V0)]) %>%
+    select(-.data$V0) %>%
+    # get rid of regions outside of APs
+    filter(!is.na(.data$tAP))
+  
+  # ensure proper grouping
+  if (is.null(data$sweep) == F)
+    data %<>% group_by(.data$sweep, .data$APindex)
+  else
+    data %<>% group_by(.data$APindex)
+  
+  APstats =
+    data %>%
+    dplyr::summarise(Vpeak = .data[[vvar]][tAP == min(abs(tAP))],
+                     tpeak = .data$t[tAP == min(abs(tAP))])
+  
+  # extract the afterhyperpolarisation
+  afterhyp =
+    data %>%
+    filter(.data$tAP > 0) %>% #filter all data after AP peak
+    dplyr::summarise(Vmin = min(.data[[vvar]]),
+                     tmin = c(tAP[.data[[vvar]] == min(.data[[vvar]])])) %>%
+    #take first minimum value only
+    mutate(rank = seq_along(.data$tmin)) %>%
+    filter(.data$rank == 1) %>%
+    #get rid of helper column
+    select(-.data$rank)
+  
+  APstats %<>%
+    left_join(., afterhyp)
+  
+  # extract the AP width
+  data %<>%
+    mutate(Vnormtest = abs(.data$Vnorm - 0.5),
+           APphase = sign(.data$tAP)) %>%
+    filter(.data$APphase != 0)
+  
+  # ensure proper grouping
+  # split the data into pre and post peak to find a value for V1/2 before and after!
+  if (is.null(data$sweep) == F)
+    data %<>% group_by(.data$sweep, .data$APindex, .data$APphase)
+  else
+    data %<>% group_by(.data$APindex, .data$APphase)
+  
+  width =
+    data %>%
+    # extract the values of V1/2
+    summarise(timepoints = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
+              Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)])
+  
+  # now calculate the width proper, regrouping is required
+  width %<>%  ungroup(.)
+  
+  if (is.null(width$sweep) == F)
+    width %<>% group_by(.data$sweep, .data$APindex)
+  else
+    width %<>% group_by(.data$APindex)
+  
+  # calculate the width 
+  width %<>%
+    mutate(width = .data$timepoints - lag(.data$timepoints)) %>%
+    filter(!is.na(.data$width)) %>%
+    select(.data$width)
+  
+  APstats %<>%
+    left_join(., width)
+  
+  ##calculating ISI
+  # regroup
+  if (is.null(APstats$sweep) == F)
+    APstats %<>%
+    ungroup() %>%
+    group_by(.data$sweep)
+  else
+    APstats %<>% ungroup()
+  
+  APstats %>%
+    mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak))
+}
+
 
