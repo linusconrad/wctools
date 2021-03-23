@@ -41,7 +41,7 @@ calcZAP = function(ZAPinput){
 #' @export
 process.ZAP = function(file){
   # 1. get data, SR is 50000 always
-  data = read.multisweep(file, 50000)
+  data = read.multisweep.custom(file)
   print(paste0("Done reading file ", file,"..."))
   names(data) = c("V", "I", "t", "sweep")
   # 2. Calculate it 
