@@ -183,3 +183,66 @@ read.multisweep.pyth = function(file) {
   # return the data
   df
 }
+
+#' Read a custom stimulus abf
+#' 
+#' This is a wrapper around pyabf.
+#' This function works on custom waveform stimulation (file-based) abf files.
+#' The original protocol stimulus is reconstructed and added to the file.
+#' This works with the ZAP protocol I designed which gets truncated by pclamp in a particular way, this reading function fixes that.
+#' I have not tested with other protocols.
+#' @param abf periodic stimulation abf file
+#' @return tibble of the abf with stimulus and sweep variable
+#' @export
+#' @importFrom magrittr %>%
+read.multisweep.custom = function(file) {
+  abf = pyabf$ABF(file)
+  # refactor the previous python script into plain R
+  getdf =  function(sweep, abfobj) {
+    # R function to extract 1 sweep
+    sweep = as.integer(sweep - 1)# need to do -1 because of typical python indexing
+    abfobj$setSweep(sweep)
+    
+    # default stimulus deadtime
+    deadtime = max(abfobj$sweepX) / 64
+    deadsamples = round(length(abfobj$sweepX) / 64)
+    # 0 to be filled
+    missingsamples = length(abfobj$sweepX) - length(abfobj$sweepC)
+    
+    tidyr::tibble(
+      t = abfobj$sweepX,
+      value = abfobj$sweepY,
+      command = c(abfobj$sweepC,
+                  rep.int(0, missingsamples)),
+      sweep = rep(sweep, abfobj$sweepPointCount)
+    )
+  }
+  # get the names of the variables from the abf object
+  # they are hidden away a bit
+  nameC = abf$dacNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
+  nameY = abf$adcNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
+  # make an ldply call to extract all
+  df =
+    as.list(1:abf$sweepCount) %>%
+    plyr::ldply(getdf, abf) %>%
+    tidyr::tibble() %>%
+    mutate(sweep = .data$sweep + 1) # return to R indexing
+  # clean the names
+  names(df)[2] = nameY
+  names(df)[3] = nameC
+  # return the data but filter out the deadtime
+  df %>% dplyr::filter(.data$t > (max(.data$t) / 64))
+  #df
+}
+
+
+
+
+
+
+
+
+
+
+
+

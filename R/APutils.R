@@ -138,7 +138,7 @@ getAPstats = function(df, vvar) {
     data %<>% group_by(.data$APindex)
   
   APstats =
-    wctools::returnAPdf(df, "Vmemb") %>%
+    wctools::returnAPdf(df, vvar) %>%
     select(-.data$t,-.data$tAP)
   
   # extract the afterhyperpolarisation
