@@ -4,12 +4,14 @@
 \alias{returnAPdf}
 \title{Fetch Action potentials}
 \usage{
-returnAPdf(df, Vvar)
+returnAPdf(df, Vvar, thresh1)
 }
 \arguments{
 \item{df}{Time series df from an abf}
 
 \item{Vvar}{Character vector, name of the voltage variable within df}
+
+\item{thresh1}{threshold for detection of AP peaks, will default to 0 (aP is an AP if its overshoots)}
 }
 \value{
 A data frame with variables described above, with list columns

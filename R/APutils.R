@@ -22,15 +22,21 @@ findAP = function(dV)
 #' It contains the time scales `tAP` and `t` in list columns that can be matched with the source data timeseries to align AP for plotting.
 #' @param df Time series df from an abf
 #' @param Vvar Character vector, name of the voltage variable within df
+#' @param thresh1 threshold for detection of AP peaks, will default to 0 (aP is an AP if its overshoots)
 #' @return A data frame with variables described above, with list columns 
 #' @export 
-returnAPdf = function(df, Vvar) {
+returnAPdf = function(df, Vvar, thresh1) {
   copydf = df
+  
+  # default value for AP detection threshold
+  if(missing(thresh1))
+    thresh1 <- 0
+    
   # calculate the relevant stuff
   copydf$dV = c(NA, (base::diff(copydf[[Vvar]]) / 1000 / (1 / 50000)))
   copydf$AP = findAP(copydf$dV)
   # write the summary AP dataframe, filter AP
-  copydf %<>% filter(.data[[Vvar]] > 0, .data$AP == T)
+  copydf %<>% filter(.data[[Vvar]] > thresh1, .data$AP == T)
   # Following calculations change whether this has sweeps or not
   if (is.null(copydf$sweep) == F)
     copydf %<>% group_by(.data$sweep)
@@ -94,9 +100,13 @@ returnAPdf = function(df, Vvar) {
 #' Then it adds the index of the AP within the sweep and adds a timescale to align all AP found by their peaks.
 #' @param df Dataframe with the rawdata
 #' @param Vvar name of the voltage variable in `df`, string
+#' @param thresh2 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return source dataset with added AP index and AP centered timescale
 #' @export
-addAP = function(df, Vvar) {
+addAP = function(df, Vvar, thresh2) {
+  # default value for AP detection threshold
+  if(missing(thresh2))
+    thresh2 <- 0
   # change behaviour depending on whether is gap free or sweep data
   columns = c("t", "tAP", "APindex", "sweep")
   
@@ -104,7 +114,7 @@ addAP = function(df, Vvar) {
     columns = c("t", "tAP", "APindex")
   
   APdf =
-    returnAPdf(df, Vvar) %>%
+    returnAPdf(df, Vvar, thresh1 = thresh2) %>%
     dplyr::select(dplyr::all_of(columns)) %>%
     unnest(cols = c(.data$t, .data$tAP))
   #join and return
@@ -116,10 +126,13 @@ addAP = function(df, Vvar) {
 #' This function takes an abf timeseries, detects AP within it and returns their waveform measurements.
 #' @param df Dataframe with the rawdata
 #' @param vvar name of the voltage variable in `df`, string
+#' @param thresh3 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return summary stats of the AP such as Peak, time, afterhyperpolarisation, width and interspike interval
 #' @export
-getAPstats = function(df, vvar) {
-  data = addAP(df, vvar)
+getAPstats = function(df, vvar, thresh3) {
+  if(missing(thresh3))
+    thresh3 <- 0
+  data = addAP(df, vvar, thresh2 = thresh3)
   
   # The definition of Vrest might need some work..
   Vrest = pracma::Mode(data[[vvar]])
@@ -138,7 +151,7 @@ getAPstats = function(df, vvar) {
     data %<>% group_by(.data$APindex)
   
   APstats =
-    wctools::returnAPdf(df, vvar) %>%
+    wctools::returnAPdf(df, vvar, thresh1 = thresh3) %>%
     select(-.data$t,-.data$tAP)
   
   # extract the afterhyperpolarisation
