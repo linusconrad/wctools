@@ -194,6 +194,7 @@ read.multisweep.pyth = function(file) {
 #' @param abf periodic stimulation abf file
 #' @return tibble of the abf with stimulus and sweep variable
 #' @export
+#' @importFrom magrittr %>%
 read.multisweep.custom = function(file) {
   abf = pyabf$ABF(file)
   # refactor the previous python script into plain R
@@ -225,12 +226,13 @@ read.multisweep.custom = function(file) {
     as.list(1:abf$sweepCount) %>%
     plyr::ldply(getdf, abf) %>%
     tidyr::tibble() %>%
-    mutate(sweep = .data$sweep +1) # return to R indexing
+    mutate(sweep = .data$sweep + 1) # return to R indexing
   # clean the names
   names(df)[2] = nameY
   names(df)[3] = nameC
   # return the data but filter out the deadtime
-  df %>% dplyr::filter(.data$t > (max(.data$t)/64))
+  df %>% dplyr::filter(.data$t > (max(.data$t) / 64))
+  #df
 }
 
 

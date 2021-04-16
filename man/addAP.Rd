@@ -4,12 +4,14 @@
 \alias{addAP}
 \title{Fortify an DF with AP information}
 \usage{
-addAP(df, Vvar)
+addAP(df, Vvar, thresh2)
 }
 \arguments{
 \item{df}{Dataframe with the rawdata}
 
 \item{Vvar}{name of the voltage variable in \code{df}, string}
+
+\item{thresh2}{threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)}
 }
 \value{
 source dataset with added AP index and AP centered timescale

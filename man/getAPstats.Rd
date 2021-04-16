@@ -4,12 +4,14 @@
 \alias{getAPstats}
 \title{Generate AP summary stats}
 \usage{
-getAPstats(df, vvar)
+getAPstats(df, vvar, thresh3)
 }
 \arguments{
 \item{df}{Dataframe with the rawdata}
 
 \item{vvar}{name of the voltage variable in \code{df}, string}
+
+\item{thresh3}{threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)}
 }
 \value{
 summary stats of the AP such as Peak, time, afterhyperpolarisation, width and interspike interval
