@@ -6,16 +6,20 @@
 #' SR of 50000 is assumed.
 #' Function is tailored to this protocol only.
 #' @param abffile The File
+#' @param Vjunc Junction potential to add
 #' @return a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
 #' @import ggplot2
 #' @import tidyr
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export
-process.passive = function(abffile) {
+process.passive = function(abffile, Vjunc) {
   data = read.multisweep.pyth(abffile)
   names(data) = c("t", "V", "I", "sweep")
   #
+  # substract the junction potential
+  data %>% mutate(V = .data$V + Vjunc)
+  
   #######
   # Calculating the simple parameters
   

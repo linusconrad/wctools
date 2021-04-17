@@ -4,10 +4,12 @@
 \alias{process.passive}
 \title{Process an abf file of the "passive" protocol}
 \usage{
-process.passive(abffile)
+process.passive(abffile, Vjunc)
 }
 \arguments{
 \item{abffile}{The File}
+
+\item{Vjunc}{Junction potential to add}
 }
 \value{
 a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.

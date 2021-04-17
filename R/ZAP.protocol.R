@@ -37,13 +37,17 @@ calcZAP = function(ZAPinput){
 #' This function takes a path to a ZAP recording and writes the ZAP profile to file
 #' Its intended to be used in l_ply calls
 #' @param file ABF file with ZAP data (3 sweeps, 50000 hz SR)
+#' @param Vjunc Junction potential to add
 #' @return writes to file ZAP csv file and plot png in the path of the input file
 #' @export
-process.ZAP = function(file){
+process.ZAP = function(file, Vjunc){
   # 1. get data, SR is 50000 always
   data = read.multisweep.custom(file)
   print(paste0("Done reading file ", file,"..."))
   names(data) = c("t", "V", "I", "sweep")
+  #substract the junction
+  data %<>% mutate(V = .data$V + Vjunc)
+  
   # 2. Calculate it 
   print("Calculating ZAP...")
   ZAPdata = calcZAP(data)
