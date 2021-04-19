@@ -154,6 +154,15 @@ getAPstats = function(df, vvar, thresh3) {
     wctools::returnAPdf(df, vvar, thresh1 = thresh3) %>%
     select(-.data$t,-.data$tAP)
   
+  # extract the maximal upstroke velocity
+  upstroke = 
+    data %>%
+    dplyr::mutate(dV = c(NA, (base::diff(data[[Vvar]]) / 1000 / (1 / 50000)))) %>%
+    dplyr::summarise(upstroke = max(dV))
+  
+  APstats %<>%
+    left_join(., upstroke)
+  
   # extract the afterhyperpolarisation
   afterhyp =
     data %>%
