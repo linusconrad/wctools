@@ -158,7 +158,7 @@ getAPstats = function(df, vvar, thresh3) {
   upstroke = 
     data %>%
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>%
-    dplyr::summarise(upstroke = max(dV))
+    dplyr::summarise(upstroke = max(dV, na.rm = T))
   
   APstats %<>%
     left_join(., upstroke)

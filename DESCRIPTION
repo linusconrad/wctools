@@ -35,5 +35,7 @@ Imports:
     signal,
     egg,
     reticulate,
-    pracma
+    pracma,
+    patchwork,
+    minpack.lm
 Suggests:
