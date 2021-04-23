@@ -193,9 +193,12 @@ getAPstats = function(df, vvar, thresh3) {
   
   width =
     data %>%
+    # filter crossings that belong to a subsequent or previous AP/ depolarisation
+    left_join(afterhyp) %>%
+    dplyr::filter(tAP < tmin, tAP > -0.01) %>%
     # extract the values of V1/2
-    summarise(timepoints = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
-              Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)])
+    summarise(halfpoint = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
+              Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)]) 
   
   # now calculate the width proper, regrouping is required
   width %<>%  ungroup(.)
@@ -207,9 +210,9 @@ getAPstats = function(df, vvar, thresh3) {
   
   # calculate the width 
   width %<>%
-    mutate(width = .data$timepoints - lag(.data$timepoints)) %>%
-    filter(!is.na(.data$width)) %>%
-    select(.data$width)
+    mutate(width = .data$halfpoint - lag(.data$halfpoint)) %>%
+    filter(!is.na(.data$width))# %>%
+    #select(.data$width)
   
   APstats %<>%
     left_join(., width)

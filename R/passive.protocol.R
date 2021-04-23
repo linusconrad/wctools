@@ -4,7 +4,7 @@
 #' This function takes an .abf file of the passive protocol and returns to the folder a summary graph and a .csv.
 #' These contain per-sweep summaries.
 #' SR of 50000 is assumed.
-#' Function is tailored to this protocol on lists.
+#' Function is tailored to this protocol only.
 #' @param abffile The File
 #' @param Vjunc Junction potential to add
 #' @return a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
