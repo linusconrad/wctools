@@ -157,8 +157,9 @@ getAPstats = function(df, vvar, thresh3) {
   # extract the maximal upstroke velocity
   upstroke = 
     data %>%
-    dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>%
-    dplyr::summarise(upstroke = max(dV, na.rm = T))
+    dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
+    #using max comes up with strange high values
+    dplyr::summarise(upstroke = quantile(dV, probs = 0.99, na.rm = T))
   
   APstats %<>%
     left_join(., upstroke)
