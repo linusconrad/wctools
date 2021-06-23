@@ -157,6 +157,9 @@ getAPstats = function(df, vvar, thresh3) {
   # extract the maximal upstroke velocity
   upstroke = 
     data %>%
+    # this can find erroneous stimulus artefacts.
+    # filter out the actual upstroke (time immediatly before the peak (lets say 2 ms))
+    filter(tAP > -0.002) %>%
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
     #using max comes up with strange high values
     dplyr::summarise(upstroke = quantile(dV, probs = 0.99, na.rm = T))
