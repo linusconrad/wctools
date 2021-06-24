@@ -71,7 +71,7 @@ process.VCstep =
       left_join(VCdatabysweep, peakdata)
     
     # write to file in case TC analysis fails  
-    write_csv(VCdatabysweep, file = paste0(abffile, "VCmeasurements.csv"))
+    readr::write_csv(VCdatabysweep, file = paste0(abffile, "VCmeasurements.csv"))
     
     # Boltzmann fit
     fit = minpack.lm::nlsLM(
@@ -99,12 +99,12 @@ process.VCstep =
         Inorm = .data$Isubs / max(.data$Isubs),
         tfit = .data$t - tjump
       ) %>%
-      select(-Isubs) %>%
+      select(-.data$Isubs) %>%
       #get rid of voltages without activation
       filter(.data$Vm > -21, .data$Inorm < 0.97, .data$Inorm > 0.03) 
     
     # Fit a biexponential to everything
-    safefit = safely(minpack.lm::nlsLM)
+    safefit = purrr::safely(minpack.lm::nlsLM)
     
     KAfits =
       VCfitdata %>%
@@ -145,29 +145,29 @@ process.VCstep =
     
     KAparams =
       KAfits %>%
-      group_by(sweep, Vm) %>%
-      select(params) %>%
-      unnest(params) %>%
-      select(term, estimate) %>%
-      pivot_wider(names_from = term,
-                  values_from = estimate,
+      group_by(.data$sweep, .data$Vm) %>%
+      select(.data$params) %>%
+      unnest(.data$params) %>%
+      select(.data$term, .data$estimate) %>%
+      pivot_wider(names_from = .data$term,
+                  values_from = .data$estimate,
                   names_prefix = "IKA.") %>%
       # rescale to ms time constants
-      mutate(IKA.tau1 = 1 / exp(IKA.lrc1) * 1000,
-             IKA.tau2 = 1 / exp(IKA.lrc2) * 1000)
+      mutate(IKA.tau1 = 1 / exp(.data$IKA.lrc1) * 1000,
+             IKA.tau2 = 1 / exp(.data$IKA.lrc2) * 1000)
     
     IKAparamplot =
       KAparams %>%
-      group_by(sweep, Vm) %>%
-      select(IKA.A1, IKA.tau1, IKA.A2, IKA.tau2) %>%
+      group_by(.data$sweep, .data$Vm) %>%
+      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.A2, .data$IKA.tau2) %>%
       pivot_longer(cols = c(3:6)) %>%
-      mutate(var = stringr::str_sub(name, start = 5, end = 5)) %>%
-      ggplot(aes(x = Vm, y = value, colour = name)) +
+      mutate(var = stringr::str_sub(.data$name, start = 5, end = 5)) %>%
+      ggplot(aes(x = .data$Vm, y = .data$value, colour = .data$name)) +
       geom_hline(yintercept = 0,
                  linetype = 3,
                  colour = "grey50") +
       facet_wrap(
-        ~ var,
+        ~ .data$var,
         scales = "free",
         labeller = labeller(var = c(A = "Component", t = "Time constant, ms")),
         strip.position = "left"
@@ -180,7 +180,7 @@ process.VCstep =
     # Add KA fits to sweep summary
     KAfitsfile =
       KAparams %>%
-      select(IKA.A1, IKA.tau1, IKA.A2, IKA.tau2)
+      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.A2, .data$IKA.tau2)
     
     
     
@@ -189,8 +189,8 @@ process.VCstep =
     plot1 =
       VCdatabysweep %>%
       pivot_longer(., cols = starts_with("Ijump")) %>%
-      mutate(tjump = parse_number(name)) %>%
-      ggplot(., aes(x = V, y = value, colour = tjump)) +
+      mutate(tjump = readr::parse_number(.data$name)) %>%
+      ggplot(., aes(x = .data$V, y = .data$value, colour = .data$tjump)) +
       geom_hline(linetype = 3,
                  colour = "grey50",
                  yintercept = 0) +
@@ -218,7 +218,7 @@ process.VCstep =
         panel.background = element_rect(fill = "grey90"))
     
     # tails
-    plot2 = ggplot(VCdatabysweep, aes(x = V, y = normtail)) +
+    plot2 = ggplot(VCdatabysweep, aes(x = .data$V, y = .data$normtail)) +
       labs(y = "I tail, norm.",
            x = "Vm, mV") +
       geom_hline(yintercept = c(0, c(tidyfit$estimate[3]), c(tidyfit$estimate[3]/2)),
@@ -226,20 +226,20 @@ process.VCstep =
                  linetype = 3) +
       geom_point() +
       annotate(geom = "text",label = paste0("Vh =", plyr::round_any(tidyfit$estimate[1],0.1)), x = 0, y = 0.5, colour = "deeppink") +
-      geom_line(data = generics::augment(fit), aes(y = .fitted), colour = "deeppink")
+      geom_line(data = generics::augment(fit), aes(y = .data$.fitted), colour = "deeppink")
     
     
     # peaks
     plot3 = 
       VCdata %>%
-      filter(t < tjump + 0.03, t > tjump + 0.0002) %>%
-      ggplot(aes(x = t - tjump, y = Imemb)) +
-      geom_line(aes(group = sweep)) +
-      geom_point(data = VCdatabysweep, aes(y = Ipeak.in, x = tpeak.in ), colour = "red") +
-      geom_point(data = VCdatabysweep, aes(y = Ipeak.out, x = tpeak.out ), colour = "blue") 
+      filter(.data$t < tjump + 0.03, .data$t > tjump + 0.0002) %>%
+      ggplot(aes(x = .data$t - tjump, y = .data$Imemb)) +
+      geom_line(aes(group = .data$sweep)) +
+      geom_point(data = VCdatabysweep, aes(y = .data$Ipeak.in, x = .data$tpeak.in ), colour = "red") +
+      geom_point(data = VCdatabysweep, aes(y = .data$Ipeak.out, x = .data$tpeak.out ), colour = "blue") 
     
     plot4 =
-      ggplot(VCdatabysweep, aes(x = V, y = Ipeak.in)) +
+      ggplot(VCdatabysweep, aes(x = .data$V, y = .data$Ipeak.in)) +
       geom_line(colour = "red", alpha = 0.2) +
       labs(y = "I Peak Inw., pA",
            x = "Vm, mV") +
@@ -254,7 +254,7 @@ process.VCstep =
     
     
     plot5 =
-      ggplot(VCdatabysweep, aes(x = V, y = Ipeak.out)) +
+      ggplot(VCdatabysweep, aes(x = .data$V, y = .data$Ipeak.out)) +
       geom_line(colour = "blue", alpha = 0.2) +
       labs(y = "I Peak outw., pA",
            x = "Vm, mV") +
@@ -270,14 +270,14 @@ process.VCstep =
     # delay of peak
     plot6 =
       VCdatabysweep %>%
-      select(V, tpeak.in, tpeak.out) %>%
+      select(.data$V, .data$tpeak.in, .data$tpeak.out) %>%
       pivot_longer(starts_with("t"), values_to = "tpeak") %>%
       rowwise() %>%
-      mutate(name = str_split(pattern = "\\.", name),
-             Direction = name[2]) %>%
-      select(-name) %>%
-      filter((Direction != "out" | V > -70)) %>%
-      ggplot(aes(x = V, y = tpeak * 1000, colour = Direction)) +
+      mutate(name = stringr::str_split(pattern = "\\.", .data$name),
+             Direction = .data$name[2]) %>%
+      select(-.data$name) %>%
+      filter((.data$Direction != "out" | .data$V > -70)) %>%
+      ggplot(aes(x = .data$V, y = .data$tpeak * 1000, colour = .data$Direction)) +
       labs(x = "Vm, mV",
            y = "Time to Peak, ms") +
       geom_point() +
@@ -286,12 +286,12 @@ process.VCstep =
     
     #make the layout
     (bigplot =
-        (plot0 + plot1) / (TCfit + IKAparamplot) /(plot2 + plot6) + patchwork::plot_annotation(title = "VC testpulse",
-                                                                                            subtitle = paste0(abffile, "\n analysed on ", Sys.Date())))
+        (plot0 + plot1) / (TCfit + IKAparamplot) /(plot2 + plot6) + patchwork::plot_annotation(title = "VC Slow K currents",
+                                                                                            subtitle = paste0(abffile, "\n Analysed on ", Sys.Date())))
     # write to file
     
     
-    write_csv(KAfitsfile, file = paste0(abffile, "IKA-TCfitting.csv"))
+    readr::write_csv(KAfitsfile, file = paste0(abffile, "IKA-TCfitting.csv"))
     ggsave(bigplot, width = 11, height = 11, filename = paste0(abffile, ".VCsteps.png"))
     return(bigplot)
   }

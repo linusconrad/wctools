@@ -183,7 +183,7 @@ process.VCtest = function(abffile) {
   # collapse to one number
   utils::write.csv(tpulse.bysweep, file = paste0(abffile, "testpulse.csv"))
   (plot = (fits + params) + patchwork::plot_annotation(title = "VC testpulse",
-                                           subtitle = paste0(abffile, "\n analysed on ", Sys.Date())))
+                                           subtitle = paste0(abffile, "\n Analysed on ", Sys.Date())))
   
   
   ggsave(plot, width = 6, height = 4, filename = paste0(abffile, ".testpulse.png"))
