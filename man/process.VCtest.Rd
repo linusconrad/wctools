@@ -11,7 +11,7 @@ process.VCtest(abffile)
 \item{abffile}{The File}
 }
 \value{
-a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
+no object, but a .csv with the summarised analysis. Named with the filename trunk of 'abffile'. Written to the folder of the rawdata.
 }
 \description{
 This function takes a membrane test pulse protocol and returns parameters such as

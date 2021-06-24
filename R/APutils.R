@@ -159,12 +159,12 @@ getAPstats = function(df, vvar, thresh3) {
     data %>%
     # this can find erroneous stimulus artefacts.
     # filter out the actual upstroke (time immediatly before the peak (lets say 2 ms))
-    filter(tAP > -0.002) %>%
+    filter(.data$tAP > -0.002) %>%
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
     #using max comes up with strange high values, use percentile
     # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
-    filter(., dV < 250)%>%
-    dplyr::summarise(upstroke = quantile(dV, probs = 0.99, na.rm = T))
+    filter(., .data$dV < 250)%>%
+    dplyr::summarise(upstroke = stats::quantile(.data$dV, probs = 0.99, na.rm = T))
   
   APstats %<>%
     left_join(., upstroke)
@@ -174,7 +174,7 @@ getAPstats = function(df, vvar, thresh3) {
     data %>%
     filter(.data$tAP > 0) %>% #filter all data after AP peak
     dplyr::summarise(Vmin = min(.data[[vvar]]),
-                     tmin = c(tAP[.data[[vvar]] == min(.data[[vvar]])])) %>%
+                     tmin = c(.data$tAP[.data[[vvar]] == min(.data[[vvar]])])) %>%
     #take first minimum value only
     mutate(rank = seq_along(.data$tmin)) %>%
     filter(.data$rank == 1) %>%
@@ -201,7 +201,7 @@ getAPstats = function(df, vvar, thresh3) {
     data %>%
     # filter crossings that belong to a subsequent or previous AP/ depolarisation
     left_join(afterhyp) %>%
-    dplyr::filter(tAP < tmin) %>%
+    dplyr::filter(.data$tAP < .data$tmin) %>%
     # extract the values of V1/2
     summarise(halfpoint = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
               #testinghalfpoint = min(abs(.data$tAP[.data$Vnormtest == min(.data$Vnormtest)])),

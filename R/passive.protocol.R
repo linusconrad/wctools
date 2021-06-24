@@ -175,9 +175,9 @@ process.passive = function(abffile, Vjunc) {
     # Make a plot of the fits parameters
     params = 
     unnest(fitset, coefs) %>%
-      select(term, estimate) %>%
-      mutate(var = stringr::str_sub(term, start = 1, end =1)) %>%
-      ggplot(aes(x = sweep, y = estimate, colour = term)) +
+      select(.data$term, .data$estimate) %>%
+      mutate(var = stringr::str_sub(.data$term, start = 1, end =1)) %>%
+      ggplot(aes(x = .data$sweep, y = .data$estimate, colour = .data$term)) +
       facet_wrap( ~ var,
                   scales = "free_y",
                   strip.position = "left") +
