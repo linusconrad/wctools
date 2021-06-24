@@ -139,7 +139,7 @@ getAPstats = function(df, vvar, thresh3) {
   # Make a normalised Voltage scale
   data %<>%
     mutate(V0 = .data[[vvar]] - Vrest,
-           Vnorm = .data$V0 / .data$V0[.data$V0 == max(.data$V0)]) %>%
+           Vnorm = .data$V0 / mean(.data$V0[.data$V0 == max(.data$V0)])) %>%
     select(-.data$V0) %>%
     # get rid of regions outside of APs
     filter(!is.na(.data$tAP))
@@ -161,7 +161,9 @@ getAPstats = function(df, vvar, thresh3) {
     # filter out the actual upstroke (time immediatly before the peak (lets say 2 ms))
     filter(tAP > -0.002) %>%
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
-    #using max comes up with strange high values
+    #using max comes up with strange high values, use percentile
+    # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
+    filter(., dV < 250)%>%
     dplyr::summarise(upstroke = quantile(dV, probs = 0.99, na.rm = T))
   
   APstats %<>%
@@ -199,9 +201,10 @@ getAPstats = function(df, vvar, thresh3) {
     data %>%
     # filter crossings that belong to a subsequent or previous AP/ depolarisation
     left_join(afterhyp) %>%
-    dplyr::filter(tAP < tmin, tAP > -0.01) %>%
+    dplyr::filter(tAP < tmin) %>%
     # extract the values of V1/2
     summarise(halfpoint = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
+              #testinghalfpoint = min(abs(.data$tAP[.data$Vnormtest == min(.data$Vnormtest)])),
               Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)]) 
   
   # now calculate the width proper, regrouping is required
@@ -215,7 +218,12 @@ getAPstats = function(df, vvar, thresh3) {
   # calculate the width 
   width %<>%
     mutate(width = .data$halfpoint - lag(.data$halfpoint)) %>%
-    filter(!is.na(.data$width))# %>%
+       # widthtest  = cumsum(testinghalfpoint)) %>%
+    filter(!is.na(.data$width)) %>%
+    # filter out impossible values (AP tiling is 15 +15 so anything larger is nonsense)
+    # such spurious mistake happen rarely but I dont know in which precise context that bugs crop up
+    # safest is to just discard, any cell will have many AP such that one individual parameter wont matter
+    filter(.data$width < 0.02)
     #select(.data$width)
   
   APstats %<>%
