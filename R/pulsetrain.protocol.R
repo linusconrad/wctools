@@ -30,16 +30,15 @@ process.100hz =
     
     stimtrain %<>%
       #remove areas with no stimulation (RMP)
-      filter(., .data$t > 0.0593, .data$t < 0.5593) %>%
-      group_by(. , .data$sweep) %>%
+      filter(.data$t > 0.0593, .data$t < 0.5593) %>%
+      group_by(.data$sweep) %>%
       # add cycle time
-      mutate(.,
-             cycle = rep(c(1:nstim), each = cyclength),
+      mutate(cycle = rep(c(1:nstim), each = cyclength),
              #add dV variable
              dV = c(NA, (diff(.data$Vmemb) / 1000 / (1 / 50000)))) %>%
-      group_by(., .data$cycle, .data$sweep) %>%
+      group_by(.data$cycle, .data$sweep) %>%
       # add the timescale by cycle
-      mutate(., tcycle = seq(
+      mutate(tcycle = seq(
         from = 0,
         by = 1 / SR,
         length.out = cyclength
@@ -95,7 +94,7 @@ process.100hz =
     stimtrainAP =
       stimtrain %>%
       ungroup() %>%
-      wctools::getAPstats(., "Vmemb") %>%
+      wctools::getAPstats("Vmemb") %>%
       rename(latency = .data$tcycle)
     
     # Plot the AP params

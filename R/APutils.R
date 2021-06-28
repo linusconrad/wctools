@@ -137,18 +137,23 @@ getAPstats = function(df, vvar, thresh3) {
   # The definition of Vrest might need some work..
   Vrest = pracma::Mode(data[[vvar]])
   # Make a normalised Voltage scale
-  data %<>%
-    mutate(V0 = .data[[vvar]] - Vrest,
-           Vnorm = .data$V0 / mean(.data$V0[.data$V0 == max(.data$V0)])) %>%
-    select(-.data$V0) %>%
-    # get rid of regions outside of APs
-    filter(!is.na(.data$tAP))
+
+  data =
+    data %>%
+    mutate(V0 = .data[[vvar]] - Vrest)
   
   # ensure proper grouping
   if (is.null(data$sweep) == F)
     data %<>% group_by(.data$sweep, .data$APindex)
   else
     data %<>% group_by(.data$APindex)
+  
+  data = 
+    data %>%
+    mutate(Vnorm = .data$V0 / mean(.data$V0[.data$V0 == max(.data$V0)])) %>%
+    select(-.data$V0) %>%
+    # get rid of regions outside of APs
+    filter(!is.na(.data$tAP))
   
   APstats =
     wctools::returnAPdf(df, vvar, thresh1 = thresh3) %>%
@@ -163,11 +168,11 @@ getAPstats = function(df, vvar, thresh3) {
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
     #using max comes up with strange high values, use percentile
     # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
-    filter(., .data$dV < 250)%>%
+    filter(.data$dV < 250)%>%
     dplyr::summarise(upstroke = stats::quantile(.data$dV, probs = 0.99, na.rm = T))
   
   APstats %<>%
-    left_join(., upstroke)
+    left_join(upstroke)
   
   # extract the afterhyperpolarisation
   afterhyp =
@@ -182,7 +187,7 @@ getAPstats = function(df, vvar, thresh3) {
     select(-.data$rank)
   
   APstats %<>%
-    left_join(., afterhyp)
+    left_join(afterhyp)
   
   # extract the AP width
   data %<>%
@@ -227,7 +232,7 @@ getAPstats = function(df, vvar, thresh3) {
     #select(.data$width)
   
   APstats %<>%
-    left_join(., width)
+    left_join(width)
   
   ##calculating ISI
   # regroup

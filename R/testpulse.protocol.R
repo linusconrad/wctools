@@ -56,7 +56,7 @@ process.VCtest = function(abffile) {
       tpulse %>%
         select(.data$sweep, .data$V, .data$Isubs, .data$t) %>%
         filter(.data$t < 0.02) %>%
-        mutate(., Isubs.A = .data$Isubs) %>%
+        mutate(Isubs.A = .data$Isubs) %>%
         dplyr::summarise(Q = pracma::trapz(.data$t, .data$Isubs))
     ) %>%
     mutate(Cm = (.data$Q /.data$V) * 1000)

@@ -169,8 +169,8 @@ read.multisweep.pyth = function(file) {
   }
   # get the names of the variables from the abf object
   # they are hidden away a bit
-  nameC = abf$dacNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
-  nameY = abf$adcNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
+  nameC = abf$dacNames %>% stringi::stri_split_regex(pattern = " ") %>% unlist() %>% .[1]
+  nameY = abf$adcNames %>% stringi::stri_split_regex(pattern = " ") %>% unlist() %>% .[1]
   # make an ldply call to extract all
   df =
     as.list(1:abf$sweepCount) %>%
@@ -219,8 +219,8 @@ read.multisweep.custom = function(file) {
   }
   # get the names of the variables from the abf object
   # they are hidden away a bit
-  nameC = abf$dacNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
-  nameY = abf$adcNames %>% stringi::stri_split_regex(., pattern = " ") %>% unlist() %>% .[1]
+  nameC = abf$dacNames %>% stringi::stri_split_regex(pattern = " ") %>% unlist() %>% .[1]
+  nameY = abf$adcNames %>% stringi::stri_split_regex(pattern = " ") %>% unlist() %>% .[1]
   # make an ldply call to extract all
   df =
     as.list(1:abf$sweepCount) %>%
