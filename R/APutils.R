@@ -24,6 +24,8 @@ findAP = function(dV)
 #' @param Vvar Character vector, name of the voltage variable within df
 #' @param thresh1 threshold for detection of AP peaks, will default to 0 (aP is an AP if its overshoots)
 #' @return A data frame with variables described above, with list columns 
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export 
 returnAPdf = function(df, Vvar, thresh1) {
   copydf = df
@@ -102,6 +104,8 @@ returnAPdf = function(df, Vvar, thresh1) {
 #' @param Vvar name of the voltage variable in `df`, string
 #' @param thresh2 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return source dataset with added AP index and AP centered timescale
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export
 addAP = function(df, Vvar, thresh2) {
   # default value for AP detection threshold
@@ -128,6 +132,8 @@ addAP = function(df, Vvar, thresh2) {
 #' @param vvar name of the voltage variable in `df`, string
 #' @param thresh3 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return summary stats of the AP such as Peak, time, afterhyperpolarisation, width and interspike interval
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export
 getAPstats = function(df, vvar, thresh3) {
   if(missing(thresh3))

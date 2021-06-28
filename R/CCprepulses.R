@@ -164,7 +164,7 @@ process.CCbif = function(abffile, Vjunc, threshold) {
     theme(axis.title.y = element_blank())
   
   bifcombined = 
-    biftrace / APQC /bifsummary + patchwork::plot_annotation(title = "CC Step w/ Prepulse",
+    (biftrace / APQC /bifsummary) + patchwork::plot_annotation(title = "CC Step w/ Prepulse",
                                                     subtitle = paste0(abffile, "\n Analysed on ", Sys.Date()))
   # Write all to file
   utils::write.csv(databysweep, file = paste0(abffile, "CCbifsummary.csv"))

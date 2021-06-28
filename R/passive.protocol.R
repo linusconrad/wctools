@@ -11,6 +11,7 @@
 #' @import ggplot2
 #' @import tidyr
 #' @import patchwork
+#' @importFrom magrittr %<>%
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export

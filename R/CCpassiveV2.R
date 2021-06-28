@@ -14,7 +14,6 @@
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export
-#' 
 process.passiveV2 = function(abffile, Vjunc, threshold) {
 data = read.multisweep.pyth(abffile)
 names(data) = c("t", "V", "I", "sweep")
@@ -275,7 +274,7 @@ Vreb =
 tracereb =  data %>%
   filter(.data$t > tstim, .data$t < (tstim+0.02)) %>%
   ggplot(aes(x = .data$t, y = .data$V)) +
-  labs(title = "Rebound") +
+  labs(title = "Rebound Spike") +
   geom_hline(
     data = databysweep,
     aes(yintercept = RMP),
@@ -317,7 +316,12 @@ tracereb =  data %>%
 # combined_land = (((peakQC + tracereb)/AP)| (IV / peakwidth) | (sag  / Vreb)) +
 #   patchwork::plot_layout(widths = c(2, 1, 1))
 
-combined_land = (tracereb / AP)|(peakQC/ ((IV / peakwidth) | (sag  / Vreb)))
+
+combined_land = ((tracereb / AP) |
+  (peakQC / ((IV / peakwidth) |
+               (sag  / Vreb))) ) +
+  patchwork::plot_annotation(title = "CC Passive Response + Rebound",
+                             subtitle = paste0(abffile, "\n Analysed on ", Sys.Date()))
 
 # Write all to file
 #Write all to file
