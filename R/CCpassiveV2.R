@@ -7,6 +7,7 @@
 #' Function is tailored to this protocol only.
 #' @param abffile The File
 #' @param Vjunc Junction potential to add
+#' @param threshold Threshold for AP detection
 #' @return a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
 #' @import ggplot2
 #' @import tidyr
