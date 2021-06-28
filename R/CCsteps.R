@@ -104,15 +104,21 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
     scale_x_continuous(limits = c(0,NA)) +
     geom_step() +
     labs(y = "AP Count",
-         x = "Stim., pA")
+         x = latex2exp::TeX("I$_{stim}$, pA"))
   
   # Plot all kinds of values by sweep/stim
   plot.bysweep = 
     CCstepsummary %>%
+    mutate(# rescales these variables to ms
+      tmin = .data$tmin * 1000,
+      width = .data$width * 1000,
+      latency = .data$latency * 1000,
+      ISI = .data$ISI * 1000
+    ) %>% 
     pivot_longer(cols = c("Vpeak", "Vmin", "width", "ISI", "tmin", "latency", "upstroke")) %>%
     mutate(sweepf = as.factor(.data$sweep)) %>%
     ggplot(aes(x = .data$Istim, y = .data$value, colour = .data$APindex, fill = .data$APindex)) +
-    labs(x = "Stim., pA") +
+    labs(x = latex2exp::TeX("I$_{stim}$, pA")) +
     facet_wrap(~name, strip.position = "left", scales = "free_y") +
     geom_line(linetype = 3, aes(group = .data$APindex)) +
     geom_point(alpha = 0.5, shape = 21) +
@@ -121,17 +127,25 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
   
   plot.APsignature = 
     CCstepsummary %>%
-    ggplot(aes(y = .data$Istim, x = .data$tpeak, colour = .data$APindex)) +
-    geom_point(shape = 21) +
-    geom_line(aes(group = .data$APindex), linetype = 3)
+    ggplot(aes(y = .data$Istim, x = .data$latency *1000, colour = .data$APindex)) +
+    labs(x = "Latency, ms",
+         y = latex2exp::TeX("I$_{stim}$, pA")) +
+    geom_line(aes(group = .data$APindex), linetype = 1, alpha = 0.2)+
+    geom_point(shape = 4) 
   
   
   # Plot all kinds of values by APindex
   plot.byindex = 
     CCstepsummary %>%
+    mutate(# rescales these variables to ms
+      tmin = .data$tmin * 1000,
+      width = .data$width * 1000,
+      latency = .data$latency * 1000,
+      ISI = .data$ISI * 1000
+    ) %>% 
     pivot_longer(cols = c("Vpeak", "Vmin","latency", "width", "ISI", "tmin", "upstroke")) %>%
     mutate(indexf = as.factor(.data$APindex)) %>%
-    filter(.data$APindex %in% c(1,2)) %>%
+    #filter(.data$APindex %in% c(1,2)) %>%
     ggplot(aes(x = .data$indexf, y = .data$value)) +
     labs(x = "AP Index") +
     facet_wrap(~name, strip.position = "left", scales = "free_y") +
@@ -142,6 +156,7 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
   # make a multi plot page with patchwork
   summaryplot = 
     ((plot.QC / (plot.APsignature + plotAPmax))/ (plot.bysweep)/plot.byindex) +
+    patchwork::plot_layout(guides = "collect") +
     patchwork::plot_annotation(title = "Classic CC Steps",
                                subtitle = paste0(abffile, "\n Analysed on ", Sys.Date()))
   

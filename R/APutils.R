@@ -250,7 +250,11 @@ getAPstats = function(df, vvar, thresh3) {
     APstats %<>% ungroup()
   
   APstats %>%
-    mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak))
+    mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak)) %>%
+  # got weird spurious rows with APphase = -1 in some data
+  # behaviour otherwise as expected
+  # filter those out
+  dplyr::filter(.data$APphase != -1)
 }
 
 

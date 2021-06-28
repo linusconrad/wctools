@@ -7,6 +7,7 @@
 #' Function is tailored to this protocol only.
 #' @param abffile The File
 #' @param Vjunc Junction potential to add
+#' @param threshold threshold for the AP detector algorithm
 #' @return a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
 #' @import ggplot2
 #' @import tidyr
@@ -15,7 +16,11 @@
 #' @importFrom rlang .data
 #' @export
 process.100hz =
-  function(abffile, Vjunc) {
+  function(abffile, Vjunc, threshold) {
+    #default to 0 mV AP detection
+    if(missing(threshold))
+      threshold <- 0
+    
     stimtrain = read.multisweep.pyth(file = abffile)
     
     stimtrain$Vmemb = stimtrain$Vmemb + Vjunc
@@ -94,7 +99,7 @@ process.100hz =
     stimtrainAP =
       stimtrain %>%
       ungroup() %>%
-      wctools::getAPstats("Vmemb") %>%
+      wctools::getAPstats("Vmemb", thresh3 = threshold) %>%
       rename(latency = .data$tcycle)
     
     # Plot the AP params
