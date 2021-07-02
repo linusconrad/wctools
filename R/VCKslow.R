@@ -106,25 +106,54 @@ process.VCstep =
     # Fit a biexponential to everything
     safefit = purrr::safely(minpack.lm::nlsLM)
     
-    KAfits =
+    # KAfits =
+    #   VCfitdata %>%
+    #   group_by(.data$Vm, .data$sweep) %>%
+    #   nest() %>%
+    #   mutate(fit = purrr::map(.data$data, ~ safefit(
+    #     formula = Inorm ~ SSbiexp(tfit, A1, lrc1, A2, lrc2),
+    #     data = .
+    #   )))
+    # 
+    # # unpack the results
+    # KAfits$fit = purrr::transpose(KAfits$fit)$result
+
+    # Also try conventional approach with starting value to see if it performs better
+    KAfits2 =
       VCfitdata %>%
       group_by(.data$Vm, .data$sweep) %>%
       nest() %>%
-      mutate(fit = purrr::map(.data$data, ~ safefit(
-        formula = Inorm ~ SSbiexp(tfit, A1, lrc1, A2, lrc2),
-        data = .
-      )))
+      mutate(fit = purrr::map(
+        .data$data,
+        ~ safefit(
+          formula = Inorm ~ A1 * exp(-tfit / tau1) + A2 * exp(-tfit / tau2),
+          data = .,
+          #minpack.lm::nls.lm.control(maxiter = 10000),
+          start = list(
+            tau1 = 0.04,
+            tau2 = 0.2,
+            A1 = 0.5,
+            A2 = 0.7
+          )
+        )
+      ))
     
     # unpack the results
-    KAfits$fit = purrr::transpose(KAfits$fit)$result
+    KAfits2$fit = purrr::transpose(KAfits2$fit)$result
+    # 
+    # KAfits = 
+    # KAfits %>%
+    #   mutate(
+    #     params = purrr::map(.data$fit, broom::tidy),
+    #     KAcurves = purrr::map(.data$fit, generics::augment, newdata = tibble(tfit = seq(0.02, 0.55, 0.01)))
+    # )
     
-    KAfits = 
-    KAfits %>%
+    KAfits2 = 
+      KAfits2 %>%
       mutate(
         params = purrr::map(.data$fit, broom::tidy),
         KAcurves = purrr::map(.data$fit, generics::augment, newdata = tibble(tfit = seq(0.02, 0.55, 0.01)))
       )
-    
     
     # Plot of the raw tc fits
     TCfit =
@@ -135,16 +164,23 @@ process.VCstep =
                  colour = "grey50") +
       geom_line() +
       facet_wrap( ~ .data$Vm, ncol = 3) +
+      # geom_line(
+      #   data = unnest(KAfits, .data$KAcurves),
+      #   aes(y = .data$.fitted),
+      #   colour = "#d30102",
+      #   size = 1.2,
+      #   alpha = 1
+      # ) +
       geom_line(
-        data = unnest(KAfits, .data$KAcurves),
+        data = unnest(KAfits2, .data$KAcurves),
         aes(y = .data$.fitted),
-        colour = "#d30102",
+        colour = "blue",
         size = 1.2,
         alpha = 1
       )
     
     KAparams =
-      KAfits %>%
+      KAfits2 %>%
       group_by(.data$sweep, .data$Vm) %>%
       select(.data$params) %>%
       unnest(.data$params) %>%
@@ -153,8 +189,8 @@ process.VCstep =
                   values_from = .data$estimate,
                   names_prefix = "IKA.") %>%
       # rescale to ms time constants
-      mutate(IKA.tau1 = 1 / exp(.data$IKA.lrc1) * 1000,
-             IKA.tau2 = 1 / exp(.data$IKA.lrc2) * 1000)
+      mutate(IKA.tau1 = .data$IKA.tau1 * 1000,
+             IKA.tau2 =.data$IKA.tau2 * 1000)
     
     IKAparamplot =
       KAparams %>%
