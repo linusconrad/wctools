@@ -114,6 +114,13 @@ process.CCbif = function(abffile, Vjunc, threshold) {
   
   RMP = mean(databysweep$RMP)
   # merge the WF measurements and AP params
+  # calculate the number of AP
+  databysweep =
+    left_join(databysweep,
+              bifAP %>%
+                group_by(.data$sweep) %>%
+                dplyr::summarise(nAP = max(.data$APindex)))
+    
   databysweep =
     left_join(databysweep, bifAP %>%
                 filter(.data$APindex == 1))

@@ -101,7 +101,7 @@ process.VCstep =
       ) %>%
       select(-.data$Isubs) %>%
       #get rid of voltages without activation
-      filter(.data$Vm > -21, .data$Inorm < 0.97, .data$Inorm > 0.03) 
+      filter(.data$Vm > 0, .data$Inorm < 0.9, .data$Inorm > 0.03) 
     
     # Fit a biexponential to everything
     safefit = purrr::safely(minpack.lm::nlsLM)
@@ -140,7 +140,9 @@ process.VCstep =
     
     # unpack the results
     KAfits2$fit = purrr::transpose(KAfits2$fit)$result
-    # 
+    
+  
+    
     # KAfits = 
     # KAfits %>%
     #   mutate(
@@ -152,9 +154,16 @@ process.VCstep =
       KAfits2 %>%
       mutate(
         params = purrr::map(.data$fit, broom::tidy),
+        QC = purrr::map(.data$fit, broom::glance),
         KAcurves = purrr::map(.data$fit, generics::augment, newdata = tibble(tfit = seq(0.02, 0.55, 0.01)))
       )
     
+    # Filter out non-converged
+    KAfits2 =
+      KAfits2 %>%
+      unnest(QC) %>%
+      filter(isConv == TRUE)
+
     # Plot of the raw tc fits
     TCfit =
       VCfitdata %>%
@@ -162,7 +171,7 @@ process.VCstep =
       geom_hline(yintercept = c(0, 1),
                  linetype = 3,
                  colour = "grey50") +
-      geom_line() +
+      geom_line(size = 0.1) +
       facet_wrap( ~ .data$Vm, ncol = 3) +
       # geom_line(
       #   data = unnest(KAfits, .data$KAcurves),
@@ -175,8 +184,8 @@ process.VCstep =
         data = unnest(KAfits2, .data$KAcurves),
         aes(y = .data$.fitted),
         colour = "blue",
-        size = 1.2,
-        alpha = 1
+        size = 0.5,
+        alpha = 0.5
       )
     
     KAparams =
