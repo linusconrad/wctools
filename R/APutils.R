@@ -24,6 +24,8 @@ findAP = function(dV)
 #' @param Vvar Character vector, name of the voltage variable within df
 #' @param thresh1 threshold for detection of AP peaks, will default to 0 (aP is an AP if its overshoots)
 #' @return A data frame with variables described above, with list columns 
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export 
 returnAPdf = function(df, Vvar, thresh1) {
   copydf = df
@@ -102,6 +104,8 @@ returnAPdf = function(df, Vvar, thresh1) {
 #' @param Vvar name of the voltage variable in `df`, string
 #' @param thresh2 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return source dataset with added AP index and AP centered timescale
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export
 addAP = function(df, Vvar, thresh2) {
   # default value for AP detection threshold
@@ -128,6 +132,8 @@ addAP = function(df, Vvar, thresh2) {
 #' @param vvar name of the voltage variable in `df`, string
 #' @param thresh3 threshold for detection of AP peaks, will default to 0 (AP is an AP if its overshoots)
 #' @return summary stats of the AP such as Peak, time, afterhyperpolarisation, width and interspike interval
+#' @import tidyr
+#' @importFrom magrittr %<>%
 #' @export
 getAPstats = function(df, vvar, thresh3) {
   if(missing(thresh3))
@@ -137,12 +143,10 @@ getAPstats = function(df, vvar, thresh3) {
   # The definition of Vrest might need some work..
   Vrest = pracma::Mode(data[[vvar]])
   # Make a normalised Voltage scale
-  data %<>%
-    mutate(V0 = .data[[vvar]] - Vrest,
-           Vnorm = .data$V0 / .data$V0[.data$V0 == max(.data$V0)]) %>%
-    select(-.data$V0) %>%
-    # get rid of regions outside of APs
-    filter(!is.na(.data$tAP))
+
+  data =
+    data %>%
+    mutate(V0 = .data[[vvar]] - Vrest)
   
   # ensure proper grouping
   if (is.null(data$sweep) == F)
@@ -150,16 +154,38 @@ getAPstats = function(df, vvar, thresh3) {
   else
     data %<>% group_by(.data$APindex)
   
+  data = 
+    data %>%
+    mutate(Vnorm = .data$V0 / mean(.data$V0[.data$V0 == max(.data$V0)])) %>%
+    select(-.data$V0) %>%
+    # get rid of regions outside of APs
+    filter(!is.na(.data$tAP))
+  
   APstats =
     wctools::returnAPdf(df, vvar, thresh1 = thresh3) %>%
     select(-.data$t,-.data$tAP)
+  
+  # extract the maximal upstroke velocity
+  upstroke = 
+    data %>%
+    # this can find erroneous stimulus artefacts.
+    # filter out the actual upstroke (time immediatly before the peak (lets say 2 ms))
+    filter(.data$tAP > -0.002) %>%
+    dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
+    #using max comes up with strange high values, use percentile
+    # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
+    filter(.data$dV < 250)%>%
+    dplyr::summarise(upstroke = stats::quantile(.data$dV, probs = 0.99, na.rm = T))
+  
+  APstats %<>%
+    left_join(upstroke)
   
   # extract the afterhyperpolarisation
   afterhyp =
     data %>%
     filter(.data$tAP > 0) %>% #filter all data after AP peak
     dplyr::summarise(Vmin = min(.data[[vvar]]),
-                     tmin = c(tAP[.data[[vvar]] == min(.data[[vvar]])])) %>%
+                     tmin = c(.data$tAP[.data[[vvar]] == min(.data[[vvar]])])) %>%
     #take first minimum value only
     mutate(rank = seq_along(.data$tmin)) %>%
     filter(.data$rank == 1) %>%
@@ -167,7 +193,7 @@ getAPstats = function(df, vvar, thresh3) {
     select(-.data$rank)
   
   APstats %<>%
-    left_join(., afterhyp)
+    left_join(afterhyp)
   
   # extract the AP width
   data %<>%
@@ -184,9 +210,13 @@ getAPstats = function(df, vvar, thresh3) {
   
   width =
     data %>%
+    # filter crossings that belong to a subsequent or previous AP/ depolarisation
+    left_join(afterhyp) %>%
+    dplyr::filter(.data$tAP < .data$tmin) %>%
     # extract the values of V1/2
-    summarise(timepoints = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
-              Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)])
+    summarise(halfpoint = .data$tAP[.data$Vnormtest == min(.data$Vnormtest)],
+              #testinghalfpoint = min(abs(.data$tAP[.data$Vnormtest == min(.data$Vnormtest)])),
+              Vhalf = .data[[vvar]][.data$Vnormtest == min(.data$Vnormtest)]) 
   
   # now calculate the width proper, regrouping is required
   width %<>%  ungroup(.)
@@ -198,12 +228,17 @@ getAPstats = function(df, vvar, thresh3) {
   
   # calculate the width 
   width %<>%
-    mutate(width = .data$timepoints - lag(.data$timepoints)) %>%
+    mutate(width = .data$halfpoint - lag(.data$halfpoint)) %>%
+       # widthtest  = cumsum(testinghalfpoint)) %>%
     filter(!is.na(.data$width)) %>%
-    select(.data$width)
+    # filter out impossible values (AP tiling is 15 +15 so anything larger is nonsense)
+    # such spurious mistake happen rarely but I dont know in which precise context that bugs crop up
+    # safest is to just discard, any cell will have many AP such that one individual parameter wont matter
+    filter(.data$width < 0.02)
+    #select(.data$width)
   
   APstats %<>%
-    left_join(., width)
+    left_join(width)
   
   ##calculating ISI
   # regroup
@@ -215,7 +250,11 @@ getAPstats = function(df, vvar, thresh3) {
     APstats %<>% ungroup()
   
   APstats %>%
-    mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak))
+    mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak)) %>%
+  # got weird spurious rows with APphase = -1 in some data
+  # behaviour otherwise as expected
+  # filter those out
+  dplyr::filter(.data$APphase != -1)
 }
 
 

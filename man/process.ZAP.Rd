@@ -4,10 +4,12 @@
 \alias{process.ZAP}
 \title{Processing function for ZAP rawdata}
 \usage{
-process.ZAP(file)
+process.ZAP(file, Vjunc)
 }
 \arguments{
 \item{file}{ABF file with ZAP data (3 sweeps, 50000 hz SR)}
+
+\item{Vjunc}{Junction potential to add}
 }
 \value{
 writes to file ZAP csv file and plot png in the path of the input file

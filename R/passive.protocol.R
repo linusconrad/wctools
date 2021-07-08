@@ -6,16 +6,22 @@
 #' SR of 50000 is assumed.
 #' Function is tailored to this protocol only.
 #' @param abffile The File
+#' @param Vjunc Junction potential to add
 #' @return a .png and a .csv with the summarised analysis. Named with the filename trunk of 'abffile'.
 #' @import ggplot2
 #' @import tidyr
+#' @import patchwork
+#' @importFrom magrittr %<>%
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export
-process.passive = function(abffile) {
+process.passive = function(abffile, Vjunc) {
   data = read.multisweep.pyth(abffile)
   names(data) = c("t", "V", "I", "sweep")
   #
+  # substract the junction potential
+  data %>% mutate(V = .data$V + Vjunc)
+  
   #######
   # Calculating the simple parameters
   
@@ -100,8 +106,8 @@ process.passive = function(abffile) {
         mutate(
           .,
           tscaled = .data$t - 0.0299,
-          Istim = measure.timepoint(.data$I, .data$t, 0.5, 0.02),
-          Vsteady = measure.timepoint(.data$V, .data$t, 0.5, 0.02),
+          Istim = measure.timepoint(.data$I, .data$tscaled, 0.5, 0.02),
+          Vsteady = measure.timepoint(.data$V, .data$tscaled, 0.4, 0.02),
           RMP = measure.timepoint(.data$V, .data$t, 0.02, 0.02),
           Vmin = min(.data$V),
           Vscaled = 1 - (.data$V - .data$RMP) / (.data$Vsteady - .data$RMP),
@@ -111,10 +117,10 @@ process.passive = function(abffile) {
         ) %>%
        # for the fits do not take the first sweeps with sag.
        # use the first 20 ms of sweeps without
-      filter(.data$sweep > 2,
-             .data$sweep < 10,
+      filter(.data$sweep > 3,
+             .data$sweep < 9,
              .data$tscaled >  0,
-             .data$tscaled <  0.05))
+             .data$tscaled <  0.4))
     
     
     # Alternatively use the fitset to find the crossing of the normalised response
@@ -129,26 +135,58 @@ process.passive = function(abffile) {
       left_join(databysweep, summarise(fitset, taux))
     
     # run the fitting in failsafe mode to generate table output
-    safe_nls = purrr::safely(stats::nls)
+    safe_nls = purrr::safely(minpack.lm::nlsLM)
     #now do the fitting with a purr call and process the results
     fitset %<>%
       group_by(.data$sweep) %>%
       nest() %>%
-      mutate(fit = purrr::map(.data$data, ~ safe_nls(
-        formula = Vscaled ~ exp(-tscaled / tau),
-        data = .,
-        start = list(tau = 0.5)
-      )))
-
+      mutate(
+        fit = purrr::map(
+          .data$data,
+          ~ safe_nls(
+            formula = Vscaled ~ exp(-tscaled / tau),
+            data = .,
+            start = list(tau = 0.5)
+          )
+        ),
+        fitbiexp = purrr::map(
+          .data$data,
+          ~ safe_nls(
+            formula = Vscaled ~ (A1 * exp(-tscaled / tau1) + A2 * exp(-tscaled / tau2)),
+            data = .,
+            start = list(
+              tau1 = 0.002,
+              tau2 = 0.2,
+              A1 = 0.9,
+              A2 = 0.1
+            )
+          )
+        )
+      )
+    
     # # Extract the results list from the safely output and overwrite the complicated nested column
     fitset$fit = purrr::transpose(fitset$fit)$result
-    #
+    fitset$fitbiexp = purrr::transpose(fitset$fitbiexp)$result
+    
     # get all the coefs and tidy stuff
     fitset %<>%
-      mutate(coefs = purrr::map(.data$fit, broom::tidy),
-             fitvalue = purrr::map(.data$fit, generics::augment))
-
-    # Make a plot of the fits
+      mutate(coefs = purrr::map(.data$fitbiexp, broom::tidy),
+             fitvalue = purrr::map(.data$fitbiexp, generics::augment))
+    
+    # Make a plot of the fits parameters
+    params = 
+    unnest(fitset, coefs) %>%
+      select(.data$term, .data$estimate) %>%
+      mutate(var = stringr::str_sub(.data$term, start = 1, end =1)) %>%
+      ggplot(aes(x = .data$sweep, y = .data$estimate, colour = .data$term)) +
+      facet_wrap( ~ var,
+                  scales = "free_y",
+                  strip.position = "left") +
+      ggthemes::scale_color_solarized(accent = "blue") +
+      geom_point() +
+      theme(axis.title.y = element_blank())
+    
+    
     fits =
       fitset %>%
       unnest(c(.data$data), keep_empty = T) %>%
@@ -160,7 +198,7 @@ process.passive = function(abffile) {
       facet_wrap(
         ~ .data$sweep,
         as.table = T,
-        scales = "free",
+        #scales = "free",
         strip.position = "top",
       ) +
       scale_y_continuous(limits = c(-0.09, 1)) +
@@ -194,79 +232,24 @@ process.passive = function(abffile) {
         colour = "blue",
         data = taux
       ) +
-      geom_text(
-        data = unnest(fitset, coefs) ,
-        aes(label = paste0(
-          "tau fit = ", round(.data$estimate * 1000, 2), " ms"
-        )),
-        x = 0.01,
-        y = 1,
-        colour = "red",
-        vjust = "inward",
-        hjust = "inward"
-      ) +
-      geom_text(
-        data = taux ,
-        aes(label = paste0(
-          "tau cross = ", round(.data$taucross * 1000, 2), " ms"
-        )),
-        x = 0.01,
-        y = 0.8,
-        colour = "blue",
-        vjust = "inward",
-        hjust = "inward",
-        check_overlap = T
-      ) +
       theme(legend.position = "none")
     
-    # make a plot of just the tau?
+    # plot layout
+    combined = (((IV) + (sag))/patchwork::wrap_plots(params, fits))
     
-    ##############################
-    # write all to file
-    comb =   ggpubr::ggarrange(trace, IV, sag, ncol =3)
-    
-    cowplot::plot_grid(
-      comb,
-      fits,
-      ncol = 1,
-      align = "v",
-      axis = "lr",
-      rel_heights = c(1, 4)
-    ) %>%
-      # add Text annotations
-      ggpubr::annotate_figure(
-        top = ggpubr::text_grob(
-          "Hyperpolarising step protocol",
-          size = 14
-        ),
-        bottom = ggpubr::text_grob(
-          paste0(
-            "Data source: \n",
-            abffile,
-            "\n RMP: ",
-            plyr::round_any(coefs$estimate[1], accuracy = 0.1) ,
-            " mV \n",
-            "Input Resistance: ",
-            plyr::round_any(coefs$estimate[2], accuracy = 0.01) * 1000 ,
-            " MOhm \n"
-          )
-        )
-      ) %>%
-      ggsave(
-        filename = paste0(abffile, ".passive.png"),
-        width = 10,
-        height = 15
-      )
-    
+    ggsave(
+      combined ,
+      filename = paste0(abffile, ".passive.png"),
+      width = 8.25,
+      height = 9
+    )
+   
     # extract the fit parameters and write all the summary to file
     left_join(
       databysweep,
       fitset %>%
         unnest(.data$coefs) %>%
-        select(.data$sweep, .data$estimate) %>%
-        rename(tau = .data$estimate) %>%
-        # rescale to ms
-        mutate(tau = .data$tau * 1000)
+        select(.data$sweep)
     ) %>%
       readr::write_csv(file = paste0(abffile, ".sweeps.csv"))
 }
