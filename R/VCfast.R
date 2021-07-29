@@ -74,8 +74,6 @@ process.VCf =
       filter(.data$t < tjump + 0.03, .data$t > tjump + 0.0015) %>%
       group_by(.data$sweep) %>%
       summarise(
-        Ipeak.in = min(.data$Imemb),
-        tpeak.in = t[.data$Imemb == min(.data$Imemb)][1] - tjump,
         Ipeak.out = max(.data$Imemb),
         tpeak.out = t[.data$Imemb == max(.data$Imemb)][1] - tjump
       ) )
