@@ -59,17 +59,27 @@ process.VCf =
     
     tidyfit = broom::tidy(fit)
     
-    # waveform measurements of the peak
+    # waveform measurements of the NApeak
     peakdata =
       VCf %>%
       filter(.data$t < tjump + 0.03, .data$t > tjump + 0.0005) %>%
       group_by(.data$sweep) %>%
       summarise(
         Ipeak.in = min(.data$Imemb),
+        tpeak.in = t[.data$Imemb == min(.data$Imemb)][1] - tjump)
+    
+    peakdata =
+      left_join(peakdata,
+                VCf %>%
+      filter(.data$t < tjump + 0.03, .data$t > tjump + 0.0015) %>%
+      group_by(.data$sweep) %>%
+      summarise(
+        Ipeak.in = min(.data$Imemb),
         tpeak.in = t[.data$Imemb == min(.data$Imemb)][1] - tjump,
         Ipeak.out = max(.data$Imemb),
         tpeak.out = t[.data$Imemb == max(.data$Imemb)][1] - tjump
-      ) 
+      ) )
+      
     
     VCfbysweep =
       left_join(VCfbysweep, peakdata)
