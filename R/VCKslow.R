@@ -126,14 +126,22 @@ process.VCstep =
       mutate(fit = purrr::map(
         .data$data,
         ~ safefit(
-          formula = Inorm ~ A1 * exp(-tfit / tau1) + A2 * exp(-tfit / tau2),
+          formula = Inorm ~ A1 * exp(-tfit / tau1) + (1-A1) * exp(-tfit / tau2),
           data = .,
           #minpack.lm::nls.lm.control(maxiter = 10000),
           start = list(
-            tau1 = 0.04,
-            tau2 = 0.2,
-            A1 = 0.5,
-            A2 = 0.7
+            tau1 = 0.040,
+            tau2 = 0.200,
+            A1 = 0.5),
+          upper = c(
+            tau1 = 0.150,
+            tau2 = 0.600,
+            A1 = 1
+          ),
+          lower = c(
+            tau1 = 0.005,
+            tau2 = 0.150,
+            A1 = 0
           )
         )
       ))
@@ -204,8 +212,8 @@ process.VCstep =
     IKAparamplot =
       KAparams %>%
       group_by(.data$sweep, .data$Vm) %>%
-      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.A2, .data$IKA.tau2) %>%
-      pivot_longer(cols = c(3:6)) %>%
+      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.tau2) %>%
+      pivot_longer(cols = c(3:5)) %>%
       mutate(var = stringr::str_sub(.data$name, start = 5, end = 5)) %>%
       ggplot(aes(x = .data$Vm, y = .data$value, colour = .data$name)) +
       geom_hline(yintercept = 0,
@@ -225,7 +233,7 @@ process.VCstep =
     # Add KA fits to sweep summary
     KAfitsfile =
       KAparams %>%
-      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.A2, .data$IKA.tau2)
+      select(.data$IKA.A1, .data$IKA.tau1, .data$IKA.tau2)
     
     
     
