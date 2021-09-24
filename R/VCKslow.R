@@ -166,6 +166,9 @@ process.VCstep =
         KAcurves = purrr::map(.data$fit, generics::augment, newdata = tibble(tfit = seq(0.02, 0.55, 0.01)))
       )
     
+    #return(KAfits2)
+    
+    
     # Filter out non-converged
     KAfits2 =
       KAfits2 %>%
