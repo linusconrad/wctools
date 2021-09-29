@@ -88,6 +88,19 @@ peakfit =
     Sagcurves = purrr::map(fit, generics::augment, newdata = tibble(tevent = seq(0.01, 0.3, 0.01)))
   )
 
+#number of succsessfully fit sweeps
+nfits =
+  peakfit |>
+   mutate(test = class(.data$fit[[1]])) |> 
+  rowwise() |>
+  dplyr::mutate(fit.done = test != "NULL")
+
+nfits = 
+  sum(nfits$fit.done)
+
+# Flow conrol: only do the following if the fits worked, else it will give errors
+if (nfits != 0){
+
 # get the fitted curves out
 sagfitted = unnest(peakfit, .data$Sagcurves)
 #substract the offset from the timeaxis again
@@ -110,7 +123,7 @@ peakfit %<>%
   select(.data$term, .data$estimate) %>%
   pivot_wider(names_from = .data$term,
               values_from = .data$estimate, names_prefix = "Sag.")
-
+}
 peak.params =
   peaks %>%
   group_by(.data$sweep, .data$segment) %>%
@@ -123,6 +136,7 @@ peak.params =
     names_prefix = "saghalf"
   ) %>%
   mutate(sagwidth = .data$saghalf2 - .data$saghalf0)
+
 
 peakQC =
   ggplot(peaks, aes(x = .data$t, y = .data$Vnorm)) +
@@ -141,10 +155,16 @@ peakQC =
     yend = 0.5,
     colour = "deeppink"
   ) +
-  geom_line(data = sagfitted, aes(y = .data$.fitted), colour = "deeppink")+
+  # geom_line(data = sagfitted, aes(y = .data$.fitted), colour = "deeppink")+
   facet_wrap( ~ sweep) +
   cowplot::theme_nothing() +
   theme(plot.title = element_text())
+
+if (nfits != 0){
+  peakQC = 
+    peakQC +
+    geom_line(data = sagfitted, aes(y = .data$.fitted), colour = "deeppink")
+}
 
 databysweep =
   left_join(databysweep, peak.params)
@@ -327,8 +347,10 @@ combined_land = ((tracereb / AP) |
 # Write all to file
 #Write all to file
 utils::write.csv(databysweep, file = paste0(abffile, "CCpassivesummary.csv"))
-utils::write.csv(peakfit, file = paste0(abffile, "Sag-relaxation-fit.csv"))
 
+if (nfits != 0) {
+  utils::write.csv(peakfit, file = paste0(abffile, "Sag-relaxation-fit.csv"))
+}
 ggsave(combined_land, file = paste0(abffile, "CCpassiveplot.png"),  width = 10, height = 6)
 return(combined_land)
 }
