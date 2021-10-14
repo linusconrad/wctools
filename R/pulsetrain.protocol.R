@@ -37,7 +37,7 @@ process.100hz =
       #remove areas with no stimulation (RMP)
       filter(.data$t > 0.0593, .data$t < 0.5593) %>%
       group_by(.data$sweep) %>%
-      # add cycle time
+      # add stimulation cycles for segmenting the data
       mutate(cycle = rep(c(1:nstim), each = cyclength),
              #add dV variable
              dV = c(NA, (diff(.data$Vmemb) / 1000 / (1 / 50000)))) %>%
@@ -56,6 +56,12 @@ process.100hz =
                   ungroup() %>%
                   group_by(.data$sweep) %>%
                   summarise(Istim = max(.data$ICmd1nA)))
+    
+    # remove stimulus artefacts (may cause erroneaous AP detection)
+    # stimtrain.noartefact = 
+    #   stimtrain |> 
+    #   #inspection of rawdata suggest 0.6 ms should be safe
+    #   filter(tcycle > 0.8) 
     
     #save some space...
     stimtrain$Istim = as.factor(stimtrain$Istim)
@@ -97,10 +103,22 @@ process.100hz =
     
     #Extract all the AP
     stimtrainAP =
-      stimtrain %>%
-      ungroup() %>%
+      stimtrain |> 
+      ungroup()  |> 
       wctools::getAPstats("Vmemb", thresh3 = threshold) %>%
-      rename(latency = .data$tcycle)
+      rename(latency = .data$tcycle) |> 
+    # check for extra AP detected in the same cycle (should not happen, likely artefact, only retain the second found AP)
+      group_by(sweep, cycle) |> 
+      mutate(index.cyc = seq_along(AP)) |> 
+      # the correct peak of the contentious ones is the higher one
+      filter(Vpeak == max(Vpeak)) |> 
+      #need to re-calc ISI and APindex
+      ungroup() |> 
+      group_by(sweep) |>
+      mutate(ISI = .data$tpeak - dplyr::lag(.data$tpeak),
+             APindex = seq_along(AP))
+
+    #return(stimtrainAP)
     
     # Plot the AP params
     APparamplot =
