@@ -33,7 +33,6 @@ Imports:
     plyr,
     readr,
     signal,
-    egg,
     reticulate,
     pracma,
     patchwork,
