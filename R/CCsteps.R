@@ -54,7 +54,10 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
       CCstepsummary %>%
         group_by(.data$sweep) %>%
         summarise(nAP = max(.data$APindex),
-                  Istim = .data$Istim[1])
+                  Istim = .data$Istim[1],
+                  # get latency of the last AP (for firing type interpretation)
+                  lastAP = max(.data$latency)
+                  )
     ) %>%
     replace_na(list(nAP = 0))
   
