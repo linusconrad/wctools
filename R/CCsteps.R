@@ -33,6 +33,7 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
   #get the APstats
   CCstepsummary =
     CCdata %>%
+    filter(t>tstim) |> 
     getAPstats("Vm", thresh3 = thresh4) %>%
     mutate(latency = .data$tpeak - tstim,
            halfpoint1 = .data$width - .data$halfpoint,
