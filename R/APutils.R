@@ -32,7 +32,7 @@ returnAPdf = function(df, Vvar, thresh1) {
   
   # default value for AP detection threshold
   if(missing(thresh1))
-    thresh1 <- 0
+    thresh1 = 0
     
   # calculate the relevant stuff
   copydf$dV = c(NA, (base::diff(copydf[[Vvar]]) / 1000 / (1 / 50000)))

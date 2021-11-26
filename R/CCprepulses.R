@@ -35,7 +35,7 @@ process.CCbif = function(abffile, Vjunc, threshold) {
   # get AP stats, calculate latency based on stimulation onset
   bifAP =
     bifurcationdata %>%
-    filter(.data$t > 0.35) %>%
+    filter(.data$t > tjump) %>%
     wctools::getAPstats("Vmemb", threshold) %>%
     mutate(
       latency = .data$tpeak - tjump,
