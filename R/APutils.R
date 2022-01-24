@@ -177,8 +177,24 @@ getAPstats = function(df, vvar, thresh3) {
     filter(.data$dV < 250)%>%
     dplyr::summarise(upstroke = stats::quantile(.data$dV, probs = 0.99, na.rm = T))
   
+  # Do the same for Downstroke
+  downstroke = 
+    data %>%
+    # this can find erroneous stimulus artefacts.
+    # filter out the actual downstroke (post peak)
+    filter(.data$tAP < 0.010) %>%
+    dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
+    #using max comes up with strange high values, use percentile
+    # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
+    filter(abs(.data$dV) < 250)%>%
+    dplyr::summarise(downstroke = stats::quantile(.data$dV, probs = 0.01, na.rm = T))
+  
+  
   APstats %<>%
     left_join(upstroke)
+  
+  APstats %<>%
+    left_join(downstroke)
   
   # extract the afterhyperpolarisation
   afterhyp =
