@@ -186,7 +186,7 @@ getAPstats = function(df, vvar, thresh3) {
     dplyr::mutate(dV = c(NA, (base::diff(.data[[vvar]]) / 1000 / (1 / 50000)))) %>% # unit is V/s
     #using max comes up with strange high values, use percentile
     # also here strange high values can crop up, just filter everything that is blatantly out of physiological range
-    filter(abs(.data$dV) < 250)%>%
+    filter((.data$dV) > -150)%>%
     dplyr::summarise(downstroke = stats::quantile(.data$dV, probs = 0.01, na.rm = T))
   
   
