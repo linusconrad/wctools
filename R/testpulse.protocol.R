@@ -10,10 +10,39 @@
 #' @export
 process.VCtest = function(abffile) {
   tpulse =
-    read.multisweep.pyth(abffile) %>%
-    filter(.data$Vcmd0 != 0)
+    read.multisweep.pyth(abffile)
+    
+  # process off response data to calulate Cm
+  offr = 
+    tpulse |> 
+    mutate(t = .data$t - 0.06156) %>%
+    filter(.data$t > 0, .data$t < 0.05) %>%
+    group_by(.data$sweep)
   
-  tpulse %<>%
+  
+  offr.bysweep =
+    offr %>%
+    group_by(.data$sweep) %>%
+    dplyr::summarise(
+      Iss = wctools::measure.timepoint(.data$Imemb, .data$t, 0.045, win = 3)
+    )
+  
+  offr =
+    left_join(offr, offr.bysweep) |>
+    mutate(Isubs = (.data$Imemb - .data$Iss),
+           Inet = abs(.data$Isubs))
+  
+  # calculate and merge the capacitance
+  offrQ = 
+    offr %>% 
+    group_by(.data$sweep) |> 
+    dplyr::summarise(Q = pracma::trapz(.data$t, .data$Inet))
+  
+  
+  # processing of the on response
+  tpulse =
+    tpulse |> 
+    filter(.data$Vcmd0 != 0) |> 
     mutate(t = .data$t - 0.01156) %>%
     filter(.data$t > 0, .data$t < 0.05) %>%
     group_by(.data$sweep)
@@ -50,16 +79,23 @@ process.VCtest = function(abffile) {
     scale_x_log10(labels = scales::trans_format("log10", scales::math_format(10 ^.x)))
   
   # Calculate the capcitance with the integral
-  tpulse.bysweep =
-    left_join(
-      tpulse.bysweep,
-      tpulse %>%
-        select(.data$sweep, .data$V, .data$Isubs, .data$t) %>%
-        filter(.data$t < 0.02) %>%
-        mutate(Isubs.A = .data$Isubs) %>%
-        dplyr::summarise(Q = pracma::trapz(.data$t, .data$Isubs))
-    ) %>%
-    mutate(Cm = (.data$Q /.data$V) * 1000)
+  # tpulse.bysweep =
+  #   left_join(
+  #     tpulse.bysweep,
+  #     tpulse %>%
+  #       select(.data$sweep, .data$V, .data$Isubs, .data$t) %>%
+  #       filter(.data$t < 0.02) %>%
+  #       mutate(Isubs.A = .data$Isubs) %>%
+  #       dplyr::summarise(Q = pracma::trapz(.data$t, .data$Isubs))
+  #   ) %>%
+  #   mutate(Cm = (.data$Q /.data$V) * 1000)
+  
+  tpulse.bysweep = 
+    left_join(tpulse.bysweep,
+              offrQ) |> 
+    mutate(Cm = (.data$Q /abs(.data$V)) * 1000)
+  
+  
   
   #return(plot1)
   # Fit the time constant
