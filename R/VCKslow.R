@@ -132,14 +132,14 @@ process.VCstep =
           start = list(
             tau1 = 0.080,
             tau2 = 0.250,
-            A1 = 0.8)
+            A1 = 0.8),
           upper = c(
             tau1 = 0.150,
             tau2 = 1.6,
             A1 = 1
           ),
           lower = c(
-            tau1 = 0.005,
+            tau1 = 0.001,
             tau2 = 0.150,
             A1 = 0
           )
