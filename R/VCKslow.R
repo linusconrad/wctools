@@ -130,7 +130,6 @@ process.VCstep =
           data = .,
           #minpack.lm::nls.lm.control(maxiter = 10000),
           start = list(
-<<<<<<< HEAD
             tau1 = 0.080,
             tau2 = 0.250,
             A1 = 0.8),
@@ -144,21 +143,6 @@ process.VCstep =
             tau2 = 0.150,
             A1 = 0
           )
-=======
-            tau1 = 0.040,
-            tau2 = 0.200,
-            A1 = 0.5)
-          # upper = c(
-          #   tau1 = 0.150,
-          #   tau2 = 0.600,
-          #   A1 = 1
-          # ),
-          # lower = c(
-          #   tau1 = 0.005,
-          #   tau2 = 0.150,
-          #   A1 = 0
-          # )
->>>>>>> 2c2b181fd5eef5f31247ff654558d228716d040b
         )
       ))
     
