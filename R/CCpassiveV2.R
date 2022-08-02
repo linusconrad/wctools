@@ -351,7 +351,7 @@ utils::write.csv(databysweep, file = paste0(abffile, "CCpassivesummary.csv"))
 if (nfits != 0) {
   utils::write.csv(peakfit, file = paste0(abffile, "Sag-relaxation-fit.csv"))
 }
-if listobj {
+if (listobj == T) {
   return(list(data,
               databysweep,
               peaks,
@@ -359,6 +359,7 @@ if listobj {
               sagfitted,
               peak.params))
 }
+
 
 ggsave(combined_land, file = paste0(abffile, "CCpassiveplot.png"),  width = 10, height = 6)
 return(combined_land)
