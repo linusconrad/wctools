@@ -15,7 +15,7 @@
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export
-process.passiveV2 = function(abffile, Vjunc, threshold) {
+process.passiveV2 = function(abffile, Vjunc, threshold, listobj = F) {
 data = read.multisweep.pyth(abffile)
 names(data) = c("t", "V", "I", "sweep")
 
@@ -351,6 +351,15 @@ utils::write.csv(databysweep, file = paste0(abffile, "CCpassivesummary.csv"))
 if (nfits != 0) {
   utils::write.csv(peakfit, file = paste0(abffile, "Sag-relaxation-fit.csv"))
 }
+if listobj {
+  return(list(data,
+              databysweep,
+              peaks,
+              peakfit,
+              sagfitted,
+              peak.params))
+}
+
 ggsave(combined_land, file = paste0(abffile, "CCpassiveplot.png"),  width = 10, height = 6)
 return(combined_land)
 }
