@@ -14,7 +14,7 @@
 #' @importFrom rlang .data
 #' @export
 process.VCstep = 
-  function(abffile){
+  function(abffile, listobj = F){
     VCdata = read.multisweep.pyth(abffile)
     
     # Vcmd is offset by 80 (Vjunc offset within amp)
@@ -103,7 +103,7 @@ process.VCstep =
       #get rid of voltages without activation
       filter(.data$Vm > 0, .data$Inorm < 0.9, .data$Inorm > 0.03) 
     
-    # Fit a biexponential to everything
+   # Fit a biexponential to everything
     safefit = purrr::safely(minpack.lm::nlsLM)
     
     # KAfits =
@@ -128,7 +128,7 @@ process.VCstep =
         ~ safefit(
           formula = Inorm ~ A1 * exp(-tfit / tau1) + (1-A1) * exp(-tfit / tau2),
           data = .,
-          #minpack.lm::nls.lm.control(maxiter = 10000),
+          minpack.lm::nls.lm.control(maxiter = 10000),
           start = list(
             tau1 = 0.080,
             tau2 = 0.250,
@@ -166,7 +166,12 @@ process.VCstep =
         KAcurves = purrr::map(.data$fit, generics::augment, newdata = tibble(tfit = seq(0.02, 0.55, 0.01)))
       )
     
-    #return(KAfits2)
+    if (listobj == T) {
+      return(list(VCdata,
+                  VCfitdata,
+                  KAfits2,
+                  VCdatabysweep))
+    }
     
     
     # Filter out non-converged
