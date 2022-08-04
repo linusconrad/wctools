@@ -189,13 +189,11 @@ process.VCstep =
                  colour = "grey50") +
       geom_line(size = 0.1) +
       facet_wrap( ~ .data$Vm, ncol = 3) +
-      # geom_line(
-      #   data = unnest(KAfits, .data$KAcurves),
-      #   aes(y = .data$.fitted),
-      #   colour = "#d30102",
-      #   size = 1.2,
-      #   alpha = 1
-      # ) +
+      geom_smooth(method = "nls",
+                  aes(group = sweep),
+                  formula = y ~ SSasymp(x,A1, lrc1, A2),
+                  se = F,
+                  colour = "red") +
       geom_line(
         data = unnest(KAfits2, .data$KAcurves),
         aes(y = .data$.fitted),
