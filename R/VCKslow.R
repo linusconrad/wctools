@@ -101,7 +101,7 @@ process.VCstep =
       ) %>%
       select(-.data$Isubs) %>%
       #get rid of voltages without activation
-      filter(.data$Vm > 0, .data$Inorm < 0.9, .data$Inorm > 0.03) 
+      filter(.data$Vm > -20, .data$Inorm < 0.95, .data$Inorm > 0.03) 
     
    # Fit a biexponential to everything
     safefit = purrr::safely(minpack.lm::nlsLM)
@@ -111,12 +111,16 @@ process.VCstep =
       group_by(.data$Vm, .data$sweep) %>%
       nest() %>%
       mutate(fit = purrr::map(.data$data, ~ safefit(
-        formula = Inorm ~ SSasymp(tfit, A1, lrc1, A2),
+        formula = Inorm ~ SSasymp(tfit, Asym, R0, lrc),
+        data = .
+      )),
+      fit1 = purrr::map(.data$data, ~ safefit(
+        formula = Imemb ~ SSasymp(tfit, Asym, R0, lrc),
         data = .
       )))
 
     # unpack the results
-    KAfits$fit = purrr::transpose(KAfits$fit)$result
+    KAfits$fit = purrr::transpose(KAfits$fit1)$result
 
     KAfits =
       KAfits %>%
@@ -135,16 +139,17 @@ process.VCstep =
    # Plot of the raw tc fits
     TCfit =
       VCfitdata %>%
-      ggplot(aes(x = .data$tfit, y = .data$Inorm)) +
-      geom_hline(yintercept = c(0, 1),
-                 linetype = 3,
-                 colour = "grey50") +
-      geom_line(size = 0.1) +
-      facet_wrap( ~ .data$Vm, ncol = 3) +
+      ggplot(aes(x = .data$tfit, y = .data$Imemb)) +
+      # geom_hline(yintercept = c(0, 1),
+      #            linetype = 3,
+      #            colour = "grey50") +
+      geom_line(size = 0.1, aes(group = sweep)) +
+      facet_wrap( ~ .data$Vm, ncol = 3, scales = "free_y") +
       geom_smooth(method = "nls",
                   aes(group = sweep),
-                  formula = y ~ SSasymp(x,A1, lrc1, A2),
+                  formula = y ~ SSasymp(x,Asym, R0, lrc),
                   se = F,
+                  linetype = 3,
                   colour = "red") 
     
     KAparams =
@@ -157,18 +162,20 @@ process.VCstep =
                   values_from = .data$estimate,
                   names_prefix = "IKA.") %>%
       # rescale from log rate constant to time constant in ms
-      mutate(IKA.tau1 = (1/exp(.data$IKA.lrc1)) * 1000)
+      mutate(IKA.tau1 = (1/exp(.data$IKA.lrc)) * 1000)
     
     IKAparamplot =
       KAparams %>%
       group_by(.data$sweep, .data$Vm) %>%
-      
+      dplyr::select(-IKA.lrc) |> 
+      tidyr::pivot_longer(cols = tidyselect::starts_with("IKA")) |> 
       ggplot(aes(x = .data$Vm,
-                 y = .data$IKA.tau1)) +
+                 y = .data$value)) +
       geom_hline(yintercept = 0,
                  linetype = 3,
                  colour = "grey50") +
       geom_point() +
+      facet_wrap(~name, scales = "free_y") +
       geom_line(linetype = 3) +
       theme(axis.title.y = element_blank(),
       legend.title = element_blank())
@@ -288,6 +295,8 @@ process.VCstep =
                                                                                             subtitle = paste0(abffile, "\n Analysed on ", Sys.Date())))
     # write to file (overwrite)
     readr::write_csv(VCdatabysweep, file = paste0(abffile, "VCmeasurements.csv"))
+    readr::write_csv(KAparams, file = paste0(abffile, "fit.csv"))
+    
     # 
      ggsave(bigplot, width = 11, height = 11, filename = paste0(abffile, ".VCsteps.png"))
      return(bigplot)
