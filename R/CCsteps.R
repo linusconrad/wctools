@@ -15,9 +15,7 @@
 #' @import dplyr
 #' @importFrom rlang .data
 #' @export
-process.CCsteps = function(abffile, Vjunc, thresh4){
-  if(missing(thresh4))
-    thresh4 <- 0
+process.CCsteps = function(abffile, Vjunc, thresh4 = 0){
   # read the data
   CCdata = read.multisweep.pyth(abffile)
   # assign stim onset
@@ -100,6 +98,20 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
     ) +
     cowplot::theme_nothing()
   
+  # plot the initial segment to assess thresholds + other bahaviors
+  plotStart =
+    CCdata %>%
+    ggplot(aes(x = .data$t, y = .data$Vm)) +
+    geom_hline(yintercept = c(0),
+               colour = "grey50",
+               linetype = 3) +
+    facet_wrap( ~ sweep,
+                ncol = 5,
+                as.table = T) +
+    geom_line(size = 0.2) +
+    scale_x_continuous(limits = c(tstim-0.001, tstim +0.02))
+  
+  
   # plot the APmax
   plotAPmax =
     CCstepbysweep %>%
@@ -164,7 +176,9 @@ process.CCsteps = function(abffile, Vjunc, thresh4){
     patchwork::plot_annotation(title = "Classic CC Steps",
                                subtitle = paste0(abffile, "\n Analysed on ", Sys.Date()))
   
+  
   ggsave(summaryplot, width = 8.25, height = 11.75, filename = paste0(abffile, ".CCsteps.png"))
+  ggsave(plotStart, width = 8.25, height = 11.75, filename = paste0(abffile, ".CCsteps_init.png"))
   
   readr::write_csv(CCstepsummary, file = paste0(abffile, ".CCstepsAP.csv"))
   readr::write_csv(CCstepbysweep, file = paste0(abffile, ".sweeps.csv"))
