@@ -35,6 +35,7 @@ process.VCtest = function(abffile) {
   # calculate and merge the capacitance
   offrQ = 
     offr %>% 
+    filter(.data$t > 0.007) |> 
     group_by(.data$sweep) |> 
     dplyr::summarise(Q = pracma::trapz(.data$t, .data$Inet))
   
