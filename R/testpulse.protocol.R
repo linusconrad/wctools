@@ -35,7 +35,7 @@ process.VCtest = function(abffile) {
   # calculate and merge the capacitance
   offrQ = 
     offr %>% 
-    filter(.data$t > 0.007) |> 
+    filter(.data$t > 0.07) |> 
     group_by(.data$sweep) |> 
     dplyr::summarise(Q = pracma::trapz(.data$t, .data$Inet))
   
@@ -215,7 +215,7 @@ process.VCtest = function(abffile) {
            Vt.tau2 = .data$VCtest.tau2*1000,
            Comp.soma = .data$VCtest.A1/(.data$VCtest.A1+ .data$VCtest.A2),
            Ra = (abs(.data$V)/.data$I0sum) *1000) %>%
-    select(.data$V, .data$Cm, .data$Vt.tau1, .data$Vt.tau2, .data$Comp.soma, .data$Ra)
+    select(.data$V, .data$Cm, .data$Vt.tau1, .data$Vt.tau2, .data$Comp.soma, .data$Ra, .data$Q)
 
   # collapse to one number
   utils::write.csv(tpulse.bysweep, file = paste0(abffile, "testpulse.csv"))
