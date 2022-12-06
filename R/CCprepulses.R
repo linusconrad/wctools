@@ -16,10 +16,7 @@
 #' @importFrom rlang .data
 #' @export
 
-process.CCbif = function(abffile, Vjunc, threshold) {
-  #default to 0 mV
-  if(missing(threshold))
-    threshold <- 0
+process.CCbif = function(abffile, Vjunc, threshold = 0) {
   # assign time of stimulus onset
   tjump = 0.37936
   
